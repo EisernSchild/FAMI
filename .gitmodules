@@ -1,3 +1,6 @@
 [submodule "t80"]
 	path = t80
 	url = https://github.com/EisernSchild/t80
+[submodule "M6809"]
+	path = M6809
+	url = https://github.com/EisernSchild/6809_6309_compatible_core

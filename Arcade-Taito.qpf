@@ -27,6 +27,7 @@ DATE = "22:27:14  November 21, 2018"
 
 # Revisions
 
+PROJECT_REVISION = "Arcade-Qix-lite"
 PROJECT_REVISION = "Arcade-SuperQix-lite"
 PROJECT_REVISION = "Arcade-Taito-lite"
 PROJECT_REVISION = "Arcade-Taito"
