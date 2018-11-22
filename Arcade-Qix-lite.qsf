@@ -353,10 +353,16 @@ set_location_assignment PIN_W20 -to SW[3]
 
 set_global_assignment -name PRE_FLOW_SCRIPT_FILE "quartus_sh:sys/build_id.tcl"
 
+set_global_assignment -name VERILOG_FILE M6809/rtl/verilog/regblock.v
+set_global_assignment -name VERILOG_FILE M6809/rtl/verilog/MC6809_cpu.v
+set_global_assignment -name VERILOG_FILE M6809/rtl/verilog/defs.v
+set_global_assignment -name VERILOG_FILE M6809/rtl/verilog/decoders.v
+set_global_assignment -name VERILOG_FILE M6809/rtl/verilog/alu16.v
 set_global_assignment -name VERILOG_FILE SysTextFont.v
 set_global_assignment -name VERILOG_FILE SysText.v
 set_global_assignment -name VHDL_FILE "Arcade-Taito.vhd"
 set_global_assignment -name CDF_FILE jtag.cdf
 set_global_assignment -name QIP_FILE sys/sys.qip
 set_global_assignment -name SYSTEMVERILOG_FILE video.sv
+set_global_assignment -name VHDL_FILE System/Qix/Qix.vhd
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
