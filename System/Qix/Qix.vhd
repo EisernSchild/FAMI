@@ -49,7 +49,39 @@ architecture System of Qix is
 
 	);
 	end component MC6809_cpu;
+	
+	
+-- The M6845 has 48 external signals; 16 inputs and 32 outputs.
+	component MC6845 is
+	port(
+
+	-- CPU INTERFACE SIGNALS
+		DI     : in std_logic_vector(7 downto 0);  -- Input Data bus input (8-bits)
+		RNW    : in std_logic;                     -- Read not write, data transfer direction (1=read, 0=write)
+		NCS    : in std_logic;                     -- Not chip select, enables CPU data transfer, active low
+		RS     : in std_logic;                     -- Register select, when low the address register is selected, when high one of the 18 control registers is selected
+		E      : in std_logic;                     -- Enable, used as a strobe signal in CPU read or write operations
+		DR     : out std_logic_vector(7 downto 0); -- Data bus output (8-bits)
+		NVDL   : out std_logic;                    -- Not valid data, can be used, in combination with DI0-7 & DR0-7, to generate a bidirectional data bus, active low
+
+	-- CRT INTERFACE SIGNALS
+		CLK    : in std_logic;                      -- Clock input, defines character timing
+		HSYNC  : out std_logic;                     -- Horizontal synchronization, active high
+		VSYNC  : out std_logic;                     -- Vertical synchronization, active high
+		EDISP  : out std_logic;                     -- Enable display (DE) , defines the display period in horizontal and vertical raster scanning, active high
+		MA     : out std_logic_vector(13 downto 0); -- Refresh memory address lines (16K max.)
+		RA     : out std_logic_vector(4 downto 0);  -- Raster address lines
+		ECURS  : out std_logic;                     -- Enable cursor, used to display the cursor, active high
+		LPSTB  : in std_logic;                      -- Light pen strobe, on a low to high transition the refresh memory address is stored in the light pen register. Must be high for at least 1 period of CLK
+
+	-- OTHER INTERFACE SIGNALS
+		NRESET : in std_logic; -- Reset, when low the M6845 is reset after 3 clocks
+		NTST   : in std_logic; -- Used during testing for fault cover improvement
 		
+	);
+	end component MC6845;
+	
+	-- 
 	--     Qix clocks : 
 	--           _   _   _   _   _   _   _   _   _   _   _   _   _   _   _   _   
 	--      10M / \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \__
