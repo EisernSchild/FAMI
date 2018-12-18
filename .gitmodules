@@ -7,3 +7,6 @@
 [submodule "M6845"]
 	path = M6845
 	url = https://github.com/EisernSchild/MC6845
+[submodule "M6800"]
+	path = M6800
+	url = https://github.com/EisernSchild/MC6800

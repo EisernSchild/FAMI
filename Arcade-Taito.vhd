@@ -211,6 +211,7 @@ architecture basic of emu is
 		VGA_G4 : in std_logic_vector(3 downto 0);
 		VGA_B4 : in std_logic_vector(3 downto 0); 
 		
+		CE_PIXEL : out std_logic;
 		VGA_HS : out std_logic;
 		VGA_VS : out std_logic;
 		VGA_DE : out std_logic;
@@ -265,7 +266,7 @@ architecture basic of emu is
 	-- video
 	signal VGA_R4, VGA_G4, VGA_B4 : std_logic_vector(3 downto 0);
 	signal HS_CORE, VS_CORE, Cs_CORE : std_logic;
-	signal HS, VS : std_logic;
+	signal HS, VS, DE : std_logic;
 	
 	--audio
 	signal AUDIO_L8, AUDIO_R8 : std_logic_vector(7 downto 0);
@@ -286,9 +287,12 @@ begin
 	VIDEO_ARX <= x"10";-- when (status(8) = '1') else x"04";
 	VIDEO_ARY <= x"09";-- when (status(8) = '1') else x"03";
 	CLK_VIDEO <= CLK_48M;
-	CE_PIXEL <= '1';
-	VGA_HS <= not HS;
-	VGA_VS <= not VS;
+-- CE_PIXEL <= '1';
+	VGA_HS <= HS;
+	VGA_VS <= VS;
+	VGA_DE <= DE;
+--	VGA_HS <= not HS;
+--	VGA_VS <= not VS;
 	
 -- assigning DDRAM (zero)
 	DDRAM_CLK      <= '0';
@@ -366,10 +370,11 @@ begin
 		VGA_R4 => VGA_R4,
 		VGA_G4 => VGA_G4,
 		VGA_B4 => VGA_B4,
-
+		
+		CE_PIXEL => CE_PIXEL,
 		VGA_HS => HS,
 		VGA_VS => VS,
-		VGA_DE => VGA_DE,
+		VGA_DE => DE,
 		VGA_R => VGA_R,
 		VGA_G => VGA_G,
 		VGA_B => VGA_B

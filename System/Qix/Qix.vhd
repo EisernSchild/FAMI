@@ -51,34 +51,42 @@ architecture System of Qix is
 	
 	
 -- The M6845 has 48 external signals; 16 inputs and 32 outputs.
-	component MC6845 is
+	component crtc6845 is 
 	port(
-
-	-- CPU INTERFACE SIGNALS
-		DI     : in std_logic_vector(7 downto 0);  -- Input Data bus input (8-bits)
-		RNW    : in std_logic;                     -- Read not write, data transfer direction (1=read, 0=write)
-		NCS    : in std_logic;                     -- Not chip select, enables CPU data transfer, active low
-		RS     : in std_logic;                     -- Register select, when low the address register is selected, when high one of the 18 control registers is selected
-		E      : in std_logic;                     -- Enable, used as a strobe signal in CPU read or write operations
-		DR     : out std_logic_vector(7 downto 0); -- Data bus output (8-bits)
-		NVDL   : out std_logic;                    -- Not valid data, can be used, in combination with DI0-7 & DR0-7, to generate a bidirectional data bus, active low
-
 	-- CRT INTERFACE SIGNALS
-		CLK    : in std_logic;                      -- Clock input, defines character timing
-		HSYNC  : out std_logic;                     -- Horizontal synchronization, active high
-		VSYNC  : out std_logic;                     -- Vertical synchronization, active high
-		EDISP  : out std_logic;                     -- Enable display (DE) , defines the display period in horizontal and vertical raster scanning, active high
-		MA     : out std_logic_vector(13 downto 0); -- Refresh memory address lines (16K max.)
-		RA     : out std_logic_vector(4 downto 0);  -- Raster address lines
-		ECURS  : out std_logic;                     -- Enable cursor, used to display the cursor, active high
-		LPSTB  : in std_logic;                      -- Light pen strobe, on a low to high transition the refresh memory address is stored in the light pen register. Must be high for at least 1 period of CLK
-
-	-- OTHER INTERFACE SIGNALS
-		NRESET : in std_logic; -- Reset, when low the M6845 is reset after 3 clocks
-		NTST   : in std_logic  -- Used during testing for fault cover improvement
+		MA     : out STD_LOGIC_VECTOR (13 downto 0);   -- Refresh memory address lines (16K max.)
+		RA     : out STD_LOGIC_VECTOR (4 downto 0);    -- Raster address lines
+		HSYNC  : out STD_LOGIC;                        -- Horizontal synchronization, active high
+		VSYNC  : out STD_LOGIC;                        -- Vertical synchronization, active high
+		DE     : out STD_LOGIC;                        -- Enable display (DE) , defines the display period in horizontal and vertical raster scanning, active high
+		CURSOR : out STD_LOGIC;                        -- Enable cursor, used to display the cursor, active high
+		LPSTBn : in STD_LOGIC;                         -- Light pen strobe, on a low to high transition the refresh memory address is stored in the light pen register. Must be high for at least 1 period of CLK
 		
-	);
-	end component MC6845;
+	-- CPU INTERFACE SIGNALS
+		E      : in STD_LOGIC;                         -- Enable, used as a strobe signal in CPU read or write operations
+		RS     : in STD_LOGIC;                         -- Register select, when low the address register is selected, when high one of the 18 control registers is selected
+		CSn    : in STD_LOGIC;                         -- Not chip select, enables CPU data transfer, active low
+		RW     : in STD_LOGIC;                         -- Read not write, data transfer direction (1=read, 0=write)
+		D      : inout STD_LOGIC_VECTOR (7 downto 0);  -- Data bus in-/output (8-bits)
+		
+	-- OTHER INTERFACE SIGNALS
+		RESETn : in STD_LOGIC;                         -- Reset, when low the M6845 is reset after 3 clocks
+		CLK    : in STD_LOGIC;                         -- Clock input, defines character timing
+		
+	-- ADDITIONAL SIGNALS
+		REG_INIT: in STD_LOGIC;
+		Hend: inout STD_LOGIC;
+		HS: inout STD_LOGIC;
+		CHROW_CLK: inout STD_LOGIC;
+		Vend: inout STD_LOGIC;
+		SLadj: inout STD_LOGIC;
+		H: inout STD_LOGIC;
+		V: inout STD_LOGIC;
+		CURSOR_ACTIVE: inout STD_LOGIC;
+		VERT_RST: inout STD_LOGIC
+	 );
+	end component crtc6845;
+
 	
 	-- 
 	--     Qix clocks : 
@@ -136,24 +144,52 @@ architecture System of Qix is
 	signal Ctr_FRQ : integer range 0 to 15 := 0; -- frequency counter
 	
 	-- Data Processor 
-	signal dpu_addr   : std_logic_vector(15 downto 0);
-	signal dpu_di     : std_logic_vector( 7 downto 0);
-	signal dpu_do     : std_logic_vector( 7 downto 0);
-	signal dpu_rw     : std_logic;
-	signal dpu_irq    : std_logic;
-	signal dpu_firq   : std_logic;
+	signal dpu_addr       : std_logic_vector(15 downto 0);
+	signal dpu_di         : std_logic_vector( 7 downto 0);
+	signal dpu_do         : std_logic_vector( 7 downto 0);
+	signal dpu_rw         : std_logic;
+	signal dpu_irq        : std_logic;
+	signal dpu_firq       : std_logic;
 	signal dpu_we, dpu_oe : std_logic;
 	signal dpu_state      : std_logic_vector(5 downto 0);
 	
 	-- Video Processor 
-	signal vpu_addr   : std_logic_vector(15 downto 0);
-	signal vpu_di     : std_logic_vector( 7 downto 0);
-	signal vpu_do     : std_logic_vector( 7 downto 0);
-	signal vpu_rw     : std_logic;
-	signal vpu_irq    : std_logic;
-	signal vpu_firq   : std_logic;
+	signal vpu_addr       : std_logic_vector(15 downto 0);
+	signal vpu_di         : std_logic_vector( 7 downto 0);
+	signal vpu_do         : std_logic_vector( 7 downto 0);
+	signal vpu_rw         : std_logic;
+	signal vpu_irq        : std_logic;
+	signal vpu_firq       : std_logic;
 	signal vpu_we, vpu_oe : std_logic;
 	signal vpu_state      : std_logic_vector(5 downto 0);
+	
+	-- CRTC
+	signal CLOCK : std_logic;    
+	signal Clk_CRTC : std_logic;    
+	signal nRESET : std_logic;    
+	signal CRTC_TYPE : std_logic;    
+	signal ENABLE : std_logic;    
+	signal nCS : std_logic;    
+	signal R_nW : std_logic;    
+	signal DI : std_logic_vector(7 downto 0);  
+	signal DO : std_logic_vector(7 downto 0);
+	signal VSYNC : std_logic;
+	signal HSYNC : std_logic;
+	signal DE : std_logic;
+	signal FIELD : std_logic;
+	signal MA : std_logic_vector(13 downto 0);
+	signal RA : std_logic_vector(4 downto 0);
+	signal CURSOR :  STD_LOGIC;
+	signal LPSTBn :  STD_LOGIC;
+	signal E      :  STD_LOGIC;
+	signal RS     :  STD_LOGIC;
+	signal CSn    :  STD_LOGIC;
+	signal RW     :  STD_LOGIC;
+	signal D      :  STD_LOGIC_VECTOR(7 downto 0);
+	signal RESETn :  STD_LOGIC;
+	signal REG_INIT: STD_LOGIC; -- used for initial crtc register setting
+
+	
 	
 	
 begin
@@ -243,6 +279,58 @@ begin
 		
 		debug_clk    => '0',       -- debug clock
 		debug_data_o => open       -- serial debug info, 64 bit shift register
+	);
+	
+	-- create clock Clk_CRTC :
+	-- All timing  in  the  CRTC  is  derived from the  ClK  input.  In
+	-- alphanumeric terminals, this signal  is  the character rate. The
+	-- video rate or  "dot"  clock  is  externally divided by high-speed
+	-- logic  (TTL)  to generate the  ClK  input.
+	process (i_Clk_20M)
+		variable counter : std_logic_vector(2 downto 0) := "000";
+		variable E_counter : integer := 0; -- manually init CRTC using E and REG_INIT
+	begin
+		if rising_edge(i_Clk_20M) then
+			counter := counter + 1;
+			E_counter := E_counter +1;
+			if (counter = "100") then Clk_CRTC <= '1'; else Clk_CRTC <= '0'; end if;
+			if ((E_counter > 10) and (E_counter < 30)) then E <= '1';
+			elsif ((E_counter > 50) and (E_counter < 70)) then E <= '0';
+			else E <= '1'; end if;
+		end if;		 
+	end process;
+	REG_INIT <= '1';
+
+	-- CRTC : MC6845
+	crtc6845i : crtc6845
+	port map 
+	(
+		MA  => MA,
+		RA  => RA,
+		HSYNC  => HSYNC,
+		VSYNC  => VSYNC,
+		DE => DE,
+		CURSOR => CURSOR,
+		LPSTBn => LPSTBn,
+		E => E,
+		RS => RS,
+		CSn => CSn,
+		RW => RW,
+		D => D,
+		RESETn => '1', -- RESETn,
+		CLK => Clk_CRTC,
+		-- not standard
+		REG_INIT => REG_INIT,
+		-- unused, additional fields
+		Hend => open,
+		HS => open,
+		CHROW_CLK => open,
+		Vend => open,
+		SLadj => open,
+		H => open,
+		V => open,
+		CURSOR_ACTIVE => open,
+		VERT_RST => open
 	);
 
 
