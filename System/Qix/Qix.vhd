@@ -361,8 +361,41 @@ begin
 	
 	-- TODO !! PIAs !!
 	
-	
-
-
+	-- DATA/SOUND MEMORY MAP
+	--
+	-- Address                  Dir Data     Name        Description
+	-- ------------------------ --- -------- ----------- -----------------------
+	-- $8000 - 100000xxxxxxxxxx R/W xxxxxxxx DS0         dual port RAM (shared with video CPU)
+	-- $8400 - 100001xxxxxxxxxx R/W xxxxxxxx             local RAM
+	-- $8800 - 100010---------x R/W xxxxxxxx DS2         6850 ACIA [1]
+	-- $8C00 - 100011---------0 R/W -------- DS3         assert FIRQ on video CPU
+	-- $8C01 - 100011---------1 R/W -------- DS3         FIRQ acknowledge
+	-- $9000 - 100100--------xx R/W xxxxxxxx DS4/U20     6821 PIA (sound control / data IRQ)
+	-- $9400 - 100101--------xx R/W xxxxxxxx DS5/U11     6821 PIA (coin / player 1 inputs)
+	-- $9900 - 100110-1------xx R/W xxxxxxxx DS6/U20     6821 PIA (spare / player 2 inputs)
+	-- $9800 - 100110xxxxxxxx-- R/W ----xxxx DS6/U24     PAL 16R4 (purpose unclear)
+	-- $9C00 - 100111--------xx R/W xxxxxxxx DS7/U30     6821 PIA (player 2 inputs / coin control)
+	-- $A000 - 101xxxxxxxxxxxxx R   xxxxxxxx             program ROM
+	-- $C000 - 11xxxxxxxxxxxxxx R   xxxxxxxx             program ROM : Qix : U12 - U19
+	--
+	-- 
+	-- VIDEO BOARD MEMORY MAP
+	--
+	-- Address                  Dir Data     Name        Description
+	-- ------------------------ --- -------- ----------- -----------------------
+	-- $0000 - 0xxxxxxxxxxxxxxx R/W xxxxxxxx             direct video RAM access
+	-- $8000 - 100000xxxxxxxxxx R/W xxxxxxxx VS0         dual port RAM (shared with data CPU)
+	-- $8400 - 100001xxxxxxxxxx R/W xxxxxxxx VS1         CMOS NVRAM
+	-- $8800 - 100010----------   W xxxxxx-- VS2         self test LEDs      [1]
+	-- $8800 - 100010----------   W ------xx VS2         palette bank select [1]
+	-- $8C00 - 100011---------0 R/W -------- VS3         assert FIRQ on data CPU
+	-- $8C01 - 100011---------1 R/W -------- VS3         FIRQ acknowledge
+	-- $9000 - 100100xxxxxxxxxx R/W xxxxxxxx VS4         palette RAM (RRGGBBII)
+	-- $9400 - 100101--------00 R/W xxxxxxxx VS5         video RAM access at latched address
+	-- $9401 - 100101--------01 R/W xxxxxxxx             video RAM access mask [2]
+	-- $9402 - 100101--------1x   W xxxxxxxx VS5         video RAM address latch
+	-- $9800 - 100110---------- R   xxxxxxxx VS6         current scanline readback location
+	-- $9C00 - 100111---------x R/W xxxxxxxx VS7         68A45 video controller
+	-- $C000 - 11xxxxxxxxxxxxxx R   xxxxxxxx             program ROMs
 
 end System;
