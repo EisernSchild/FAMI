@@ -163,6 +163,14 @@ architecture System of Qix is
 	signal vpu_we, vpu_oe : std_logic;
 	signal vpu_state      : std_logic_vector(5 downto 0);
 	
+	-- Sound Processor
+	signal spu_clock  : std_logic;
+	signal spu_addr   : std_logic_vector(15 downto 0);
+	signal spu_di     : std_logic_vector( 7 downto 0);
+	signal spu_do     : std_logic_vector( 7 downto 0);
+	signal spu_rw     : std_logic;
+	signal spu_irq    : std_logic;
+	
 	-- CRTC
 	signal CLOCK : std_logic;    
 	signal Clk_CRTC : std_logic;    
@@ -279,6 +287,24 @@ begin
 		
 		debug_clk    => '0',       -- debug clock
 		debug_data_o => open       -- serial debug info, 64 bit shift register
+	);
+	
+	-- Sound Processor : MC6802
+	Sound_Processor : entity work.cpu68
+	port map(	
+		clk      => spu_clock,-- E clock input (falling edge)
+		rst      => i_Reset,    -- reset input (active high)
+		rw       => spu_rw,   -- read not write output
+		vma      => open,     -- valid memory address (active high)
+		address  => spu_addr, -- address bus output
+		data_in  => spu_di,   -- data bus input
+		data_out => spu_do,   -- data bus output
+		hold     => '0',      -- hold input (active high) extend bus cycle
+		halt     => '0',      -- halt input (active high) grants DMA
+		irq      => spu_irq,  -- interrupt request input (active high)
+		nmi      => '0',      -- non maskable interrupt request input (active high)
+		test_alu => open,
+		test_cc  => open
 	);
 	
 	-- create clock Clk_CRTC :
