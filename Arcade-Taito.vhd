@@ -260,8 +260,9 @@ architecture basic of emu is
 
 	-- clocks  
 	signal clock_locked : std_logic;
-	signal CLK_48M : std_logic;
-	signal CLK_12M : std_logic;
+	signal Clk_20M : std_logic;
+	signal Clk_12M : std_logic;
+	signal Clk_0921K : std_logic;
 	
 	-- video
 	signal VGA_R4, VGA_G4, VGA_B4 : std_logic_vector(3 downto 0);
@@ -286,7 +287,7 @@ begin
 -- assigning video streching, pixel enabled and clock
 	VIDEO_ARX <= x"10";-- when (status(8) = '1') else x"04";
 	VIDEO_ARY <= x"09";-- when (status(8) = '1') else x"03";
-	CLK_VIDEO <= CLK_48M;
+	CLK_VIDEO <= Clk_20M;
 -- CE_PIXEL <= '1';
 	VGA_HS <= HS;
 	VGA_VS <= VS;
@@ -312,7 +313,7 @@ begin
 	hps : hps_io
 	generic map (STRLEN => (CONF_STR'length) + (CONF_STR2'length) + (CONF_STR3'length) + (CONF_STR4'length))
 	port map (
-		clk_sys => CLK_12M,
+		clk_sys => Clk_12M,
 		HPS_BUS => HPS_BUS,
 		conf_str => to_slv(CONF_STR & CONF_STR2 & CONF_STR3 & CONF_STR4),
 	
@@ -355,8 +356,9 @@ begin
 	port map(
 		refclk   => CLK_50M,
 		rst      => '0',
-		outclk_0 => CLK_48M,
-		outclk_1 => CLK_12M,		
+		outclk_0 => Clk_20M,
+		outclk_1 => Clk_12M,
+		outclk_2 => Clk_0921K,
 		locked   => clock_locked
 	);
 	
@@ -364,7 +366,7 @@ begin
 	video1 : video
 	port map
 	(                                    
-		clk => CLK_48M,                
+		clk => Clk_20M,                
 		reset_n => '1',--(not reset),
 
 		VGA_R4 => VGA_R4,

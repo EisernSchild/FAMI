@@ -21,8 +21,9 @@ use IEEE.std_logic_unsigned.ALL;
 
 entity Qix is port
 (
-	i_Clk_20M : in std_logic; -- input clock 20 mhz
-	i_Reset : in std_logic -- reset when 1
+	i_Clk_20M   : in std_logic; -- input clock 20 Mhz
+	i_Clk_0921K : in std_logic; -- input clock 0.9216 MHz -- Sound CPU : M6802 @ 921.6 Khz
+	i_Reset     : in std_logic  -- reset when 1
       
 );
 end Qix;
@@ -136,7 +137,6 @@ architecture System of Qix is
 	signal Clk_5M : std_logic; -- 5Mhz
 	signal Clk_2500K : std_logic; -- 2.5Mhz
 	signal Clk_1250K : std_logic; -- 2 x M6809 @ 1.25Mhz (& All but Qix/Qix2 have a M68705 @ 1Mhz as well) 
-	signal Clk_0921K : std_logic; -- Sound CPU : M6802 @ 921.6 Khz
 	signal Clk_C : std_logic; -- composite clock
 	signal Clk_DE, Clk_Qx, Clk_E, Clk_Q_Inv, Clk_DQ : std_logic;
 	signal VEQ, RSZ, RSZ_INV, MUX, MUX_INV, RAS_INV, CAS_INV : std_logic;
@@ -273,10 +273,10 @@ begin
 	RSZ_INV <= not RSZ;
 	MUX_INV <= not MUX;
 	
-	-- assign processor clocks !! TODO !!
-	dpu_clock <= Clk_1250K;
-	vpu_clock <= Clk_1250K; -- TODO !! +1/4 step - See Qix doc
-	spu_clock <= Clk_0921K; -- TODO !! Generate Sound clock
+	-- assign processor clocks
+	dpu_clock <= Clk_DE;
+	vpu_clock <= Clk_E;
+	spu_clock <= i_Clk_0921K;
 	dual_clock<= i_Clk_20M;
 	
 	-- TODO !!
