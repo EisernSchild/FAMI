@@ -1,37 +1,14 @@
-## Welcome to GitHub Pages
+## Taito Arcade Systems FPGA Configuration
 
-You can use the [editor on GitHub](https://github.com/EisernSchild/Arcade-Taito/edit/master/README.md) to maintain and preview the content for your website in Markdown files.
+This project aims to reproduce all retrospective Taito Arcade Systems true to FPGA. It is based on Project MiSTer, which is currently the best Open Source platform for FPGA retro gaming.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+Taito has developed many of the very best arcade video games. Space Invaders (1978) is most notable; other titles include Speed Race (1974), Gun Fight (1975), Qix (1981), Jungle Hunt (1982), Elevator Action (1983), Buggy Challenge (1984), Bubble Bobble (1986), Takeshi no Chōsenjō (1986), Chase H.Q. (1988), Puzznic (1989), Kick Master (1992), Gun Buster (1992) and Puzzle Bobble (1994). Taito also had a license from Hanna-Barbera to produce games based on The Flintstones and The Jetsons.
 
-### Markdown
+### Project MiSTer
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
-
-```markdown
-Syntax highlighted code block
-
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
-```
-
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/EisernSchild/Arcade-Taito/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
+Project MiSTer is the most advanced Open Source Project regarding FPGA Retro Gaming.
+https://github.com/MiSTer-devel/Main_MiSTer/wiki
 
 ### Support or Contact
 
-Having trouble with Pages? Check out our [documentation](https://help.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+Any Questions ? Or would you like to contribute anything to Taito Arcade Systems FPGA ? Don't hesitate to contact me @ eisenschild@gmail.com .
