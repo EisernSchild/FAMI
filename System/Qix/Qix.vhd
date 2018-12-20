@@ -177,6 +177,7 @@ architecture System of Qix is
 	signal dpu_wram_addr  : std_logic_vector(12 downto 0);
 	signal dpu_wram_we    : std_logic;
 	signal dpu_wram_do    : std_logic_vector( 7 downto 0);
+	signal dpu_rom_addr   : std_logic_vector(11 downto 0);
 	
 	-- Video Processor Memory Signals
 	signal vpu_wram_addr        : std_logic_vector(12 downto 0);
@@ -185,11 +186,13 @@ architecture System of Qix is
 	signal vpu_wram_video_addr  : std_logic_vector(15 downto 0);
 	signal vpu_wram_video_we    : std_logic;
 	signal vpu_wram_video_do    : std_logic_vector( 7 downto 0);
+	signal vpu_rom_addr         : std_logic_vector(11 downto 0);
 		
 	-- Sound Processor Memory Signals
 	signal spu_wram_addr  : std_logic_vector(13 downto 0);
 	signal spu_wram_we    : std_logic;
 	signal spu_wram_do    : std_logic_vector( 7 downto 0);
+	signal spu_rom_addr   : std_logic_vector(11 downto 0);
 		
 	-- dual RAM (Data+Video) Memory Signals
 	signal dual_clock      : std_logic;
@@ -223,6 +226,10 @@ architecture System of Qix is
 	signal D      :  STD_LOGIC_VECTOR(7 downto 0);
 	signal RESETn :  STD_LOGIC;
 	signal REG_INIT: STD_LOGIC; -- used for initial crtc register setting
+	
+	-- PROM buses
+	type   prom_buses_array is array (0 to 27) of std_logic_vector(7 downto 0);
+	signal prom_buses : prom_buses_array;
 	
 begin
 	
@@ -270,7 +277,7 @@ begin
 	dpu_clock <= Clk_1250K;
 	vpu_clock <= Clk_1250K; -- TODO !! +1/4 step - See Qix doc
 	spu_clock <= Clk_0921K; -- TODO !! Generate Sound clock
-	-- dual_clock <= TODO !!
+	dual_clock<= i_Clk_20M;
 	
 	-- TODO !!
 	-- Bi-directional FIRQ capability
@@ -384,7 +391,7 @@ begin
 		-- not standard
 		REG_INIT => REG_INIT,
 		
-		-- unused, additional fields
+		-- unused, additional signals
 		Hend => open,
 		HS => open,
 		CHROW_CLK => open,
@@ -500,5 +507,27 @@ begin
 		d    => spu_do,
 		q    => spu_wram_do
 	);
+	
+	--	Data Processor ROM Region -> U12-U19 PROM
+	PROM_U12 : entity work.prom_u12 port map (CLK => dpu_clock, ADDR => dpu_rom_addr, DATA => prom_buses(12));
+	PROM_U13 : entity work.prom_u13 port map (CLK => dpu_clock, ADDR => dpu_rom_addr, DATA => prom_buses(13));
+	PROM_U14 : entity work.prom_u14 port map (CLK => dpu_clock, ADDR => dpu_rom_addr, DATA => prom_buses(14));
+	PROM_U15 : entity work.prom_u15 port map (CLK => dpu_clock, ADDR => dpu_rom_addr, DATA => prom_buses(15));
+	PROM_U16 : entity work.prom_u16 port map (CLK => dpu_clock, ADDR => dpu_rom_addr, DATA => prom_buses(16));
+	PROM_U17 : entity work.prom_u17 port map (CLK => dpu_clock, ADDR => dpu_rom_addr, DATA => prom_buses(17));
+	PROM_U18 : entity work.prom_u18 port map (CLK => dpu_clock, ADDR => dpu_rom_addr, DATA => prom_buses(18));
+	PROM_U19 : entity work.prom_u19 port map (CLK => dpu_clock, ADDR => dpu_rom_addr, DATA => prom_buses(19));
+	
+	--	Video Processor ROM Region -> U4-U10 PROM
+	PROM_U4  : entity work.prom_u4  port map (CLK => vpu_clock, ADDR => vpu_rom_addr, DATA => prom_buses( 4));
+	PROM_U5  : entity work.prom_u5  port map (CLK => vpu_clock, ADDR => vpu_rom_addr, DATA => prom_buses( 5));
+	PROM_U6  : entity work.prom_u6  port map (CLK => vpu_clock, ADDR => vpu_rom_addr, DATA => prom_buses( 6));
+	PROM_U7  : entity work.prom_u7  port map (CLK => vpu_clock, ADDR => vpu_rom_addr, DATA => prom_buses( 7));
+	PROM_U8  : entity work.prom_u8  port map (CLK => vpu_clock, ADDR => vpu_rom_addr, DATA => prom_buses( 8));
+	PROM_U9  : entity work.prom_u9  port map (CLK => vpu_clock, ADDR => vpu_rom_addr, DATA => prom_buses( 9));
+	PROM_U10 : entity work.prom_u10 port map (CLK => vpu_clock, ADDR => vpu_rom_addr, DATA => prom_buses(10));
+	
+	--	Sound Processor ROM Region -> U27 PROM
+	PROM_U27 : entity work.prom_u27 port map (CLK => spu_clock, ADDR => spu_rom_addr, DATA => prom_buses(27));
 
 end System;
