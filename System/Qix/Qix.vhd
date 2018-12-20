@@ -136,7 +136,7 @@ architecture System of Qix is
 	signal Clk_5M : std_logic; -- 5Mhz
 	signal Clk_2500K : std_logic; -- 2.5Mhz
 	signal Clk_1250K : std_logic; -- 2 x M6809 @ 1.25Mhz (& All but Qix/Qix2 have a M68705 @ 1Mhz as well) 
-	signal Clk_9216K : std_logic; -- Sound CPU : M6802 @ 921.6 Khz
+	signal Clk_0921K : std_logic; -- Sound CPU : M6802 @ 921.6 Khz
 	signal Clk_C : std_logic; -- composite clock
 	signal Clk_DE, Clk_Qx, Clk_E, Clk_Q_Inv, Clk_DQ : std_logic;
 	signal VEQ, RSZ, RSZ_INV, MUX, MUX_INV, RAS_INV, CAS_INV : std_logic;
@@ -144,6 +144,7 @@ architecture System of Qix is
 	signal Ctr_FRQ : integer range 0 to 15 := 0; -- frequency counter
 	
 	-- Data Processor 
+	signal dpu_clock      : std_logic;
 	signal dpu_addr       : std_logic_vector(15 downto 0);
 	signal dpu_di         : std_logic_vector( 7 downto 0);
 	signal dpu_do         : std_logic_vector( 7 downto 0);
@@ -151,9 +152,10 @@ architecture System of Qix is
 	signal dpu_irq        : std_logic;
 	signal dpu_firq       : std_logic;
 	signal dpu_we, dpu_oe : std_logic;
-	signal dpu_state      : std_logic_vector(5 downto 0);
+	signal dpu_state      : std_logic_vector( 5 downto 0);
 	
-	-- Video Processor 
+	-- Video Processor
+	signal vpu_clock      : std_logic;
 	signal vpu_addr       : std_logic_vector(15 downto 0);
 	signal vpu_di         : std_logic_vector( 7 downto 0);
 	signal vpu_do         : std_logic_vector( 7 downto 0);
@@ -161,7 +163,7 @@ architecture System of Qix is
 	signal vpu_irq        : std_logic;
 	signal vpu_firq       : std_logic;
 	signal vpu_we, vpu_oe : std_logic;
-	signal vpu_state      : std_logic_vector(5 downto 0);
+	signal vpu_state      : std_logic_vector( 5 downto 0);
 	
 	-- Sound Processor
 	signal spu_clock  : std_logic;
@@ -171,6 +173,31 @@ architecture System of Qix is
 	signal spu_rw     : std_logic;
 	signal spu_irq    : std_logic;
 	
+	-- Data Processor Memory Signals
+	signal dpu_wram_addr  : std_logic_vector(12 downto 0);
+	signal dpu_wram_we    : std_logic;
+	signal dpu_wram_do    : std_logic_vector( 7 downto 0);
+	
+	-- Video Processor Memory Signals
+	signal vpu_wram_addr        : std_logic_vector(12 downto 0);
+	signal vpu_wram_we          : std_logic;
+	signal vpu_wram_do          : std_logic_vector( 7 downto 0);
+	signal vpu_wram_video_addr  : std_logic_vector(15 downto 0);
+	signal vpu_wram_video_we    : std_logic;
+	signal vpu_wram_video_do    : std_logic_vector( 7 downto 0);
+		
+	-- Sound Processor Memory Signals
+	signal spu_wram_addr  : std_logic_vector(13 downto 0);
+	signal spu_wram_we    : std_logic;
+	signal spu_wram_do    : std_logic_vector( 7 downto 0);
+		
+	-- dual RAM (Data+Video) Memory Signals
+	signal dual_clock      : std_logic;
+	signal dual_di         : std_logic_vector( 7 downto 0);
+	signal dual_wram_addr  : std_logic_vector(10 downto 0);
+	signal dual_wram_we    : std_logic;
+	signal dual_wram_do    : std_logic_vector( 7 downto 0);
+			
 	-- CRTC
 	signal CLOCK : std_logic;    
 	signal Clk_CRTC : std_logic;    
@@ -196,9 +223,6 @@ architecture System of Qix is
 	signal D      :  STD_LOGIC_VECTOR(7 downto 0);
 	signal RESETn :  STD_LOGIC;
 	signal REG_INIT: STD_LOGIC; -- used for initial crtc register setting
-
-	
-	
 	
 begin
 	
@@ -242,6 +266,12 @@ begin
 	RSZ_INV <= not RSZ;
 	MUX_INV <= not MUX;
 	
+	-- assign processor clocks !! TODO !!
+	dpu_clock <= Clk_1250K;
+	vpu_clock <= Clk_1250K; -- TODO !! +1/4 step - See Qix doc
+	spu_clock <= Clk_0921K; -- TODO !! Generate Sound clock
+	-- dual_clock <= TODO !!
+	
 	-- TODO !!
 	-- Bi-directional FIRQ capability
 	-- To provide for immediate inter-system communication on demand 
@@ -254,7 +284,7 @@ begin
 	-- Data Processor : MC6809 1.25MHz
 	Data_Processor : MC6809_cpu
 	port map(
-		cpu_clk      => Clk_1250K, -- clock
+		cpu_clk      => dpu_clock, -- clock
 		cpu_reset    => i_Reset,   -- reset
 		cpu_nmi_n    => '0',       -- non-maskable interrupt
 		cpu_irq_n    => dpu_irq,   -- interrupt request
@@ -273,7 +303,7 @@ begin
 	-- Video Processor : MC6809 1.25MHz
 	Video_Processor : MC6809_cpu
 	port map(
-		cpu_clk      => Clk_1250K, -- clock TODO !! VPU CLOCK 1/4 AFTER DPU
+		cpu_clk      => vpu_clock, -- clock TODO !! VPU CLOCK 1/4 AFTER DPU
 		cpu_reset    => i_Reset,   -- reset
 		cpu_nmi_n    => '0',       -- non-maskable interrupt
 		cpu_irq_n    => vpu_irq,   -- interrupt request
@@ -293,7 +323,7 @@ begin
 	Sound_Processor : entity work.cpu68
 	port map(	
 		clk      => spu_clock,-- E clock input (falling edge)
-		rst      => i_Reset,    -- reset input (active high)
+		rst      => i_Reset,  -- reset input (active high)
 		rw       => spu_rw,   -- read not write output
 		vma      => open,     -- valid memory address (active high)
 		address  => spu_addr, -- address bus output
@@ -314,15 +344,20 @@ begin
 	-- logic  (TTL)  to generate the  ClK  input.
 	process (i_Clk_20M)
 		variable counter : std_logic_vector(2 downto 0) := "000";
-		variable E_counter : integer := 0; -- manually init CRTC using E and REG_INIT
+		variable E_counter : integer := 0; 
 	begin
 		if rising_edge(i_Clk_20M) then
+		
+			-- create clock
 			counter := counter + 1;
-			E_counter := E_counter +1;
 			if (counter = "100") then Clk_CRTC <= '1'; else Clk_CRTC <= '0'; end if;
+			
+			-- manually init CRTC using E and REG_INIT
+			E_counter := E_counter +1;
 			if ((E_counter > 10) and (E_counter < 30)) then E <= '1';
 			elsif ((E_counter > 50) and (E_counter < 70)) then E <= '0';
 			else E <= '1'; end if;
+			
 		end if;		 
 	end process;
 	REG_INIT <= '1';
@@ -343,10 +378,12 @@ begin
 		CSn => CSn,
 		RW => RW,
 		D => D,
-		RESETn => '1', -- RESETn,
+		RESETn => not i_Reset,
 		CLK => Clk_CRTC,
+		
 		-- not standard
 		REG_INIT => REG_INIT,
+		
 		-- unused, additional fields
 		Hend => open,
 		HS => open,
@@ -365,7 +402,7 @@ begin
 	--
 	-- Address                  Dir Data     Name        Description
 	-- ------------------------ --- -------- ----------- -----------------------
-	-- $8000 - 100000xxxxxxxxxx R/W xxxxxxxx DS0         dual port RAM (shared with video CPU)
+	-- $8000 - 100000xxxxxxxxxx R/W xxxxxxxx DS0         dual port RAM (shared with video cpu)
 	-- $8400 - 100001xxxxxxxxxx R/W xxxxxxxx             local RAM
 	-- $8800 - 100010---------x R/W xxxxxxxx DS2         6850 ACIA [1]
 	-- $8C00 - 100011---------0 R/W -------- DS3         assert FIRQ on video CPU
@@ -377,8 +414,29 @@ begin
 	-- $9C00 - 100111--------xx R/W xxxxxxxx DS7/U30     6821 PIA (player 2 inputs / coin control)
 	-- $A000 - 101xxxxxxxxxxxxx R   xxxxxxxx             program ROM
 	-- $C000 - 11xxxxxxxxxxxxxx R   xxxxxxxx             program ROM : Qix : U12 - U19
-	--
-	-- 
+	
+	-- $8000 - $8400 : dual port RAM (shared with video cpu)
+	dual_port_ram : entity work.gen_ram
+	generic map( dWidth => 8, aWidth => 11)
+	port map(
+		clk  => dual_clock,
+		we   => dual_wram_we,
+		addr => dual_wram_addr(10 downto 0),
+		d    => dual_di,
+		q    => dual_wram_do
+	);
+	
+	-- $8000 - $9FFF : data control memory ($8000-$8400 = dual port RAM -> shared with video CPU)
+	dpu_control_ram : entity work.gen_ram
+	generic map( dWidth => 8, aWidth => 13)
+	port map(
+		clk  => dpu_clock,
+		we   => dpu_wram_we,
+		addr => dpu_wram_addr(12 downto 0),
+		d    => dpu_do,
+		q    => dpu_wram_do
+	);
+	
 	-- VIDEO BOARD MEMORY MAP
 	--
 	-- Address                  Dir Data     Name        Description
@@ -397,5 +455,50 @@ begin
 	-- $9800 - 100110---------- R   xxxxxxxx VS6         current scanline readback location
 	-- $9C00 - 100111---------x R/W xxxxxxxx VS7         68A45 video controller
 	-- $C000 - 11xxxxxxxxxxxxxx R   xxxxxxxx             program ROMs
+	
+	-- $0000 - $7FFF : direct video RAM access - Page 0 $0000-$7FFF / Page 1 $8000-$FFFF
+	vpu_video_ram : entity work.gen_ram
+	generic map( dWidth => 8, aWidth => 16)
+	port map(
+		clk  => vpu_clock,
+		we   => vpu_wram_video_we,
+		addr => vpu_wram_video_addr(15 downto 0),
+		d    => vpu_do,
+		q    => vpu_wram_video_do
+	);
+	
+	-- $8000 - $9FFF : video control memory ($8000-$8400 = dual port RAM -> shared with data CPU)
+	vpu_control_ram : entity work.gen_ram
+	generic map( dWidth => 8, aWidth => 13)
+	port map(
+		clk  => vpu_clock,
+		we   => vpu_wram_we,
+		addr => vpu_wram_addr(12 downto 0),
+		d    => vpu_do,
+		q    => vpu_wram_do
+	);
+	
+	-- Audio CPU:
+	--
+	-- Address          Dir Data     Name        Description
+	-- ---------------- --- -------- ----------- -----------------------
+	-- $0000 - 000000000xxxxxxx R/W xxxxxxxx             6802 internal RAM
+	-- $0000 - 0-1-----------xx R/W xxxxxxxx U7          6821 PIA (TMS5200 control) - Not used by any game
+	-- $0000 - 01------------xx R/W xxxxxxxx U8          6821 PIA (DAC, communication with data CPU)
+	-- $0000 - 1100------------                          n.c.
+	-- $0000 - 1101xxxxxxxxxxxx R   xxxxxxxx U25         program ROM
+	-- $0000 - 1110xxxxxxxxxxxx R   xxxxxxxx U26         program ROM
+	-- $0000 - 1111xxxxxxxxxxxx R   xxxxxxxx U27         program ROM - Qix
+	
+	-- $0000 - $007F : 6802 internal RAM
+	spu_internal_ram : entity work.gen_ram
+	generic map(dWidth => 8, aWidth => 7)
+	port map(
+		clk  => spu_clock,
+		we   => spu_wram_we,
+		addr => spu_wram_addr(6 downto 0),
+		d    => spu_do,
+		q    => spu_wram_do
+	);
 
 end System;
