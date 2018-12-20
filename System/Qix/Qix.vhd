@@ -197,7 +197,7 @@ architecture System of Qix is
 	-- dual RAM (Data+Video) Memory Signals
 	signal dual_clock      : std_logic;
 	signal dual_di         : std_logic_vector( 7 downto 0);
-	signal dual_wram_addr  : std_logic_vector(10 downto 0);
+	signal dual_wram_addr  : std_logic_vector( 9 downto 0);
 	signal dual_wram_we    : std_logic;
 	signal dual_wram_do    : std_logic_vector( 7 downto 0);
 			
@@ -232,6 +232,10 @@ architecture System of Qix is
 	signal prom_buses : prom_buses_array;
 	
 begin
+
+	----------------------------------------------------------------------------------------------------------
+	-- Clocks
+	----------------------------------------------------------------------------------------------------------
 	
 	-- generate 10Mhz clock
 	generate_Clk10 : process(i_Clk_20M, i_Reset)
@@ -278,6 +282,35 @@ begin
 	vpu_clock <= Clk_E;
 	spu_clock <= i_Clk_0921K;
 	dual_clock<= i_Clk_20M;
+	
+	-- create clock Clk_CRTC :
+	-- All timing  in  the  CRTC  is  derived from the  ClK  input.  In
+	-- alphanumeric terminals, this signal  is  the character rate. The
+	-- video rate or  "dot"  clock  is  externally divided by high-speed
+	-- logic  (TTL)  to generate the  ClK  input.
+	process (i_Clk_20M)
+		variable counter : std_logic_vector(2 downto 0) := "000";
+		variable E_counter : integer := 0; 
+	begin
+		if rising_edge(i_Clk_20M) then
+		
+			-- create clock
+			counter := counter + 1;
+			if (counter = "100") then Clk_CRTC <= '1'; else Clk_CRTC <= '0'; end if;
+			
+			-- manually init CRTC using E and REG_INIT
+			E_counter := E_counter +1;
+			if ((E_counter > 10) and (E_counter < 30)) then E <= '1';
+			elsif ((E_counter > 50) and (E_counter < 70)) then E <= '0';
+			else E <= '1'; end if;
+			
+		end if;		 
+	end process;
+	REG_INIT <= '1';
+	
+	----------------------------------------------------------------------------------------------------------
+	-- Components
+	----------------------------------------------------------------------------------------------------------
 	
 	-- TODO !!
 	-- Bi-directional FIRQ capability
@@ -344,31 +377,6 @@ begin
 		test_cc  => open
 	);
 	
-	-- create clock Clk_CRTC :
-	-- All timing  in  the  CRTC  is  derived from the  ClK  input.  In
-	-- alphanumeric terminals, this signal  is  the character rate. The
-	-- video rate or  "dot"  clock  is  externally divided by high-speed
-	-- logic  (TTL)  to generate the  ClK  input.
-	process (i_Clk_20M)
-		variable counter : std_logic_vector(2 downto 0) := "000";
-		variable E_counter : integer := 0; 
-	begin
-		if rising_edge(i_Clk_20M) then
-		
-			-- create clock
-			counter := counter + 1;
-			if (counter = "100") then Clk_CRTC <= '1'; else Clk_CRTC <= '0'; end if;
-			
-			-- manually init CRTC using E and REG_INIT
-			E_counter := E_counter +1;
-			if ((E_counter > 10) and (E_counter < 30)) then E <= '1';
-			elsif ((E_counter > 50) and (E_counter < 70)) then E <= '0';
-			else E <= '1'; end if;
-			
-		end if;		 
-	end process;
-	REG_INIT <= '1';
-
 	-- CRTC : MC6845
 	crtc6845i : crtc6845
 	port map 
@@ -405,6 +413,10 @@ begin
 	
 	-- TODO !! PIAs !!
 	
+	----------------------------------------------------------------------------------------------------------
+	-- Memory Mapping
+	----------------------------------------------------------------------------------------------------------
+	
 	-- DATA/SOUND MEMORY MAP
 	--
 	-- Address                  Dir Data     Name        Description
@@ -424,11 +436,11 @@ begin
 	
 	-- $8000 - $8400 : dual port RAM (shared with video cpu)
 	dual_port_ram : entity work.gen_ram
-	generic map( dWidth => 8, aWidth => 11)
+	generic map( dWidth => 8, aWidth => 10)
 	port map(
 		clk  => dual_clock,
 		we   => dual_wram_we,
-		addr => dual_wram_addr(10 downto 0),
+		addr => dual_wram_addr(9 downto 0),
 		d    => dual_di,
 		q    => dual_wram_do
 	);
@@ -529,5 +541,80 @@ begin
 	
 	--	Sound Processor ROM Region -> U27 PROM
 	PROM_U27 : entity work.prom_u27 port map (CLK => spu_clock, ADDR => spu_rom_addr, DATA => prom_buses(27));
+	
+	----------------------------------------------------------------------------------------------------------
+	-- Data Processor i/o control
+	----------------------------------------------------------------------------------------------------------
+	
+	-- mux cpu in data between roms/io/wram
+	dpu_di <= -- X"00" when dpu_oe = '0' else -- ?
+		prom_buses(19) when dpu_addr(15 downto 8) >= X"F8" else
+		prom_buses(18) when dpu_addr(15 downto 8) >= X"F0" else
+		prom_buses(17) when dpu_addr(15 downto 8) >= X"E8" else
+		prom_buses(16) when dpu_addr(15 downto 8) >= X"E0" else
+		prom_buses(15) when dpu_addr(15 downto 8) >= X"D8" else
+		prom_buses(14) when dpu_addr(15 downto 8) >= X"D0" else
+		prom_buses(13) when dpu_addr(15 downto 8) >= X"C8" else
+		prom_buses(12) when dpu_addr(15 downto 8) >= X"C0" else		
+		dpu_wram_do    when dpu_addr(15 downto 8) >= X"84" else
+		dual_wram_do   when dpu_addr(15 downto 10) = "100000" else X"00";
+		
+	-- demux dual RAM data
+	dual_di <= 
+		dpu_do when dpu_addr(15 downto 10) = "100000" else
+		vpu_do when vpu_addr(15 downto 10) = "100000" else
+		dual_wram_do;	
+		
+	-- assign cpu in/out data addresses
+	dpu_rom_addr  <= dpu_addr(11 downto 0) when dpu_addr(15 downto 12) >= X"A" else X"0000";
+	dpu_wram_addr <= dpu_addr(12 downto 0) when ((dpu_addr(15 downto 12) >= X"8") and (dpu_addr(15 downto 12) < X"A")) else '0' & X"000";
+	dpu_wram_we   <= dpu_we                when ((dpu_addr(15 downto 12) >= X"8") and (dpu_addr(15 downto 12) < X"A")) else '0';
+	dual_dpu : process(dpu_addr)
+	begin
+		if dpu_addr(15 downto 10) = "100000" then
+			dual_wram_addr <= dpu_addr(9 downto 0);
+			dual_wram_we <= dpu_we;
+		end if;
+	end process dual_dpu;
+	
+	----------------------------------------------------------------------------------------------------------
+	-- Video Processor i/o control
+	----------------------------------------------------------------------------------------------------------
+	
+	-- mux cpu in data between roms/io/wram
+	vpu_di <= -- X"00" when vpu_oe = '0' else -- ?
+		prom_buses(10) when vpu_addr(15 downto 8) >= X"F8" else
+		prom_buses( 9) when vpu_addr(15 downto 8) >= X"F0" else
+		prom_buses( 8) when vpu_addr(15 downto 8) >= X"E8" else
+		prom_buses( 7) when vpu_addr(15 downto 8) >= X"E0" else
+		prom_buses( 6) when vpu_addr(15 downto 8) >= X"D8" else
+		prom_buses( 5) when vpu_addr(15 downto 8) >= X"D0" else
+		prom_buses( 4) when vpu_addr(15 downto 8) >= X"C8" else
+		prom_buses( 3) when vpu_addr(15 downto 8) >= X"C0" else		
+		vpu_wram_do    when vpu_addr(15 downto 8) >= X"84" else
+		dual_wram_do   when vpu_addr(15 downto 10) = "100000" else vpu_wram_video_do;
+		
+	-- assign cpu in/out data addresses
+	vpu_wram_video_addr <= vpu_addr when vpu_addr(15) = '0' else X"0000"; -- TODO !! PAGE 0/1 !!
+	vpu_wram_video_we   <= vpu_we   when vpu_addr(15) = '0' else '0';
+	vpu_rom_addr        <= vpu_addr(11 downto 0) when vpu_addr(15 downto 12) >= X"A" else X"0000";
+	vpu_wram_addr       <= vpu_addr(12 downto 0) when ((vpu_addr(15 downto 12) >= X"8") and (vpu_addr(15 downto 12) < X"A")) else '0' & X"000";
+	vpu_wram_we         <= vpu_we                when ((vpu_addr(15 downto 12) >= X"8") and (vpu_addr(15 downto 12) < X"A")) else '0';
+	dual_vpu : process(vpu_addr)
+	begin
+		if vpu_addr(15 downto 10) = "100000" then
+			dual_wram_addr <= vpu_addr(9 downto 0);
+			dual_wram_we <= vpu_we;
+		end if;
+	end process dual_vpu;
+	
+	----------------------------------------------------------------------------------------------------------
+	-- Sound Processor i/o control
+	----------------------------------------------------------------------------------------------------------
+	
+	----------------------------------------------------------------------------------------------------------
+	-- CRTC i/o control
+	----------------------------------------------------------------------------------------------------------
+	
 
 end System;
