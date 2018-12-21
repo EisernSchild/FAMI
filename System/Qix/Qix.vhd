@@ -569,7 +569,7 @@ begin
 		dual_wram_do;	
 		
 	-- assign cpu in/out data addresses
-	dpu_rom_addr  <= dpu_addr(11 downto 0) when dpu_addr(15 downto 12) >= X"A" else X"0000";
+	dpu_rom_addr  <= '0' & dpu_addr(10 downto 0) when dpu_addr(15 downto 12) >= X"A" else X"0000";
 	dpu_wram_addr <= dpu_addr(12 downto 0) when ((dpu_addr(15 downto 12) >= X"8") and (dpu_addr(15 downto 12) < X"A")) else '0' & X"000";
 	dpu_wram_we   <= dpu_we                when ((dpu_addr(15 downto 12) >= X"8") and (dpu_addr(15 downto 12) < X"A")) else '0';
 	dual_dpu : process(dpu_addr)
@@ -600,7 +600,7 @@ begin
 	-- assign cpu in/out data addresses
 	vpu_wram_video_addr <= vpu_addr when vpu_addr(15) = '0' else X"0000"; -- TODO !! PAGE 0/1 !!
 	vpu_wram_video_we   <= vpu_we   when vpu_addr(15) = '0' else '0';
-	vpu_rom_addr        <= vpu_addr(11 downto 0) when vpu_addr(15 downto 12) >= X"A" else X"0000";
+	vpu_rom_addr        <= '0' & vpu_addr(10 downto 0) when vpu_addr(15 downto 12) >= X"A" else X"0000";
 	vpu_wram_addr       <= vpu_addr(12 downto 0) when ((vpu_addr(15 downto 12) >= X"8") and (vpu_addr(15 downto 12) < X"A")) else '0' & X"000";
 	vpu_wram_we         <= vpu_we                when ((vpu_addr(15 downto 12) >= X"8") and (vpu_addr(15 downto 12) < X"A")) else '0';
 	dual_vpu : process(vpu_addr)
