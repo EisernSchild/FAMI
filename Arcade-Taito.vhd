@@ -381,5 +381,19 @@ begin
 		VGA_G => VGA_G,
 		VGA_B => VGA_B
 	);
+	
+-- Systems
+
+	-- System Qix
+	System_Qix : entity work.Qix
+	port map(	
+		i_Clk_20M   => Clk_20M,      -- input clock 20 Mhz ... must be same as Video Clock !!
+		i_Clk_0921K => Clk_0921K,    -- input clock 0.9216 MHz -- Sound CPU : M6802 @ 921.6 Khz
+		i_Reset     =>	RESET,        -- reset when 1
+		
+		o_VGA_R4 => VGA_R4, -- Red Color 4Bits
+		o_VGA_G4 => VGA_G4, -- Green Color 4Bits
+		o_VGA_B4 => VGA_B4  -- Blue Color 4Bits
+	);
 
 end basic;
