@@ -59,8 +59,8 @@ architecture System of Qix is
 	component crtc6845 is 
 	port(
 	-- CRT INTERFACE SIGNALS
-		MA     : out STD_LOGIC_VECTOR (13 downto 0);   -- Refresh memory address lines (16K max.)
-		RA     : out STD_LOGIC_VECTOR (4 downto 0);    -- Raster address lines
+		MA     : out STD_LOGIC_VECTOR (9 downto 0);   -- Refresh memory address lines (16K max.)
+		RA     : out STD_LOGIC_VECTOR (2 downto 0);    -- Raster address lines
 		HSYNC  : out STD_LOGIC;                        -- Horizontal synchronization, active high
 		VSYNC  : out STD_LOGIC;                        -- Vertical synchronization, active high
 		DE     : out STD_LOGIC;                        -- Enable display (DE) , defines the display period in horizontal and vertical raster scanning, active high
@@ -219,8 +219,8 @@ architecture System of Qix is
 	signal HSYNC : std_logic;
 	signal DE : std_logic;
 	signal FIELD : std_logic;
-	signal MA : std_logic_vector(13 downto 0);
-	signal RA : std_logic_vector(4 downto 0);
+	signal MA : std_logic_vector(9 downto 0);
+	signal RA : std_logic_vector(2 downto 0);
 	signal CURSOR :  STD_LOGIC;
 	signal LPSTBn :  STD_LOGIC;
 	signal E      :  STD_LOGIC;
@@ -619,8 +619,8 @@ begin
 	----------------------------------------------------------------------------------------------------------
 	-- CRTC i/o control
 	----------------------------------------------------------------------------------------------------------
-	o_VGA_R4 <= RA(3 downto 0); -- HCC(7 downto 4), -- ROW_IND & "000", -- linecount(3 downto 0),
-	o_VGA_G4 <= RA(3 downto 0); -- V & "000", -- linecount(7 downto 4),
+	o_VGA_R4 <= RA(2 downto 0)&'0'; -- HCC(7 downto 4), -- ROW_IND & "000", -- linecount(3 downto 0),
+	o_VGA_G4 <= RA(2 downto 0)&'0'; -- V & "000", -- linecount(7 downto 4),
 	o_VGA_B4 <= MA(3 downto 0); -- linecount(3 downto 0),		
 
 
