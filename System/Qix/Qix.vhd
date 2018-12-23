@@ -72,7 +72,8 @@ architecture System of Qix is
 		RS     : in STD_LOGIC;                         -- Register select, when low the address register is selected, when high one of the 18 control registers is selected
 		CSn    : in STD_LOGIC;                         -- Not chip select, enables CPU data transfer, active low
 		RW     : in STD_LOGIC;                         -- Read not write, data transfer direction (1=read, 0=write)
-		D      : inout STD_LOGIC_VECTOR (7 downto 0);  -- Data bus in-/output (8-bits)
+		DI     : in STD_LOGIC_VECTOR (7 downto 0);     -- Data bus input (8-bits)
+		DO     : out STD_LOGIC_VECTOR (7 downto 0);    -- Data bus output (8-bits)
 		
 	-- OTHER INTERFACE SIGNALS
 		RESETn : in STD_LOGIC;                         -- Reset, when low the M6845 is reset after 3 clocks
@@ -227,7 +228,6 @@ architecture System of Qix is
 	signal RS     :  STD_LOGIC;
 	signal CSn    :  STD_LOGIC;
 	signal RW     :  STD_LOGIC;
-	signal D      :  STD_LOGIC_VECTOR(7 downto 0);
 	signal RESETn :  STD_LOGIC;
 	signal REG_INIT: STD_LOGIC; -- used for initial crtc register setting
 	
@@ -399,7 +399,8 @@ begin
 		RS => RS,
 		CSn => CSn,
 		RW => RW,
-		D => D,
+		DI => DI,
+		DO => DO,
 		RESETn => not i_Reset,
 		CLK => Clk_CRTC,
 		
@@ -619,9 +620,19 @@ begin
 	----------------------------------------------------------------------------------------------------------
 	-- CRTC i/o control
 	----------------------------------------------------------------------------------------------------------
+	CSn <= '0';
+	RW <= '0';
+	RS <= '1' when vpu_addr = X"9c01" else '0';
+	DI <= vpu_do when vpu_addr = X"9C00" or vpu_addr = X"9C01" else X"00";
+	
+	
+	
+	
 	o_VGA_R4 <= RA(2 downto 0)&'0'; -- HCC(7 downto 4), -- ROW_IND & "000", -- linecount(3 downto 0),
 	o_VGA_G4 <= RA(2 downto 0)&'0'; -- V & "000", -- linecount(7 downto 4),
 	o_VGA_B4 <= MA(3 downto 0); -- linecount(3 downto 0),		
+	
+	
 
 
 end System;
