@@ -28,11 +28,14 @@ generic
 	constant nGenRamAddrWidthDPU	 : integer := 13;    -- generic RAM DPU address width
 	constant nGenRamADDrWidthVPU	 : integer := 13;    -- generic RAM VPU address width
 	constant nGenRamADDrWidthVideo : integer := 16;    -- generic RAM Video address width
-	constant nGenRamADDrWidthSPU	 : integer := 7;      -- generic RAM SPU address width
+	constant nGenRamADDrWidthSPU	 : integer := 7;     -- generic RAM SPU address width
 	
 	-- latch address constants
 	constant nFirqTrue         : integer := 16#8C00#; -- FIRQ true (both VPU and DPU)
 	constant nFirqFalse        : integer := 16#8C01#; -- FIRQ true (both VPU and DPU)
+	constant nVideoAddrLatch   : integer := 16#9400#; -- video address latch
+	constant nVideoAddrLatchHi : integer := 16#9402#; -- video address latch hi
+	constant nVideoAddrLatchLo : integer := 16#9403#; -- video address latch lo
 	constant nScanlineReadback : integer := 16#9800#; -- Scanline readback address
 	constant nCrtcLatch0       : integer := 16#9C00#; -- CRTC latch 0
 	constant nCrtcLatch1       : integer := 16#9C01#  -- CRTC latch 1
@@ -78,7 +81,7 @@ architecture System of Qix is
 	component crtc6845 is 
 	port(
 	-- CRT INTERFACE SIGNALS
-		MA     : out STD_LOGIC_VECTOR (9 downto 0);   -- Refresh memory address lines (16K max.)
+		MA     : out STD_LOGIC_VECTOR (9 downto 0);    -- Refresh memory address lines (16K max.)
 		RA     : out STD_LOGIC_VECTOR (2 downto 0);    -- Raster address lines
 		HSYNC  : out STD_LOGIC;                        -- Horizontal synchronization, active high
 		VSYNC  : out STD_LOGIC;                        -- Vertical synchronization, active high
@@ -111,7 +114,18 @@ architecture System of Qix is
 		VERT_RST: inout STD_LOGIC
 	 );
 	end component crtc6845;
+	
+-- pixel mux
+	component pixel_mux is
+	port (
+		clk_vid: in std_logic;
+		i_Pixel: in std_logic_vector(7 downto 0);  
 
+		o_R : out std_logic_vector(3 downto 0);
+		o_G : out std_logic_vector(3 downto 0);
+		o_B : out std_logic_vector(3 downto 0)
+	);
+	end component pixel_mux;
 	
 	-- 
 	--     Qix clocks : 
@@ -201,7 +215,7 @@ architecture System of Qix is
 	signal dpu_wram_addr  : std_logic_vector(12 downto 0);
 	signal dpu_wram_we    : std_logic;
 	signal dpu_wram_do    : std_logic_vector( 7 downto 0);
-	signal dpu_rom_addr   : std_logic_vector(11 downto 0);
+	signal dpu_rom_addr   : std_logic_vector(10 downto 0);
 	
 	-- Video Processor Memory Signals
 	signal vpu_wram_addr        : std_logic_vector(12 downto 0);
@@ -210,35 +224,34 @@ architecture System of Qix is
 	signal vpu_wram_video_addr  : std_logic_vector(15 downto 0);
 	signal vpu_wram_video_we    : std_logic;
 	signal vpu_wram_video_do    : std_logic_vector( 7 downto 0);
-	signal vpu_rom_addr         : std_logic_vector(11 downto 0);
+	signal vpu_rom_addr         : std_logic_vector(10 downto 0);
 		
 	-- Sound Processor Memory Signals
 	signal spu_wram_addr  : std_logic_vector(13 downto 0);
 	signal spu_wram_we    : std_logic;
 	signal spu_wram_do    : std_logic_vector( 7 downto 0);
-	signal spu_rom_addr   : std_logic_vector(11 downto 0);
+	signal spu_rom_addr   : std_logic_vector(10 downto 0);
 		
 	-- dual RAM (Data+Video) Memory Signals
 	signal dual_clock      : std_logic;
-	signal dual_wram_di         : std_logic_vector( 7 downto 0);
+	signal dual_wram_di    : std_logic_vector( 7 downto 0);
 	signal dual_wram_addr  : std_logic_vector( 9 downto 0);
 	signal dual_wram_we    : std_logic;
 	signal dual_wram_do    : std_logic_vector( 7 downto 0);
-			
-	-- CRTC
-	signal CLOCK : std_logic;    
-	signal Clk_CRTC : std_logic;    
-	signal nRESET : std_logic;    
-	signal CRTC_TYPE : std_logic;    
-	signal ENABLE : std_logic;    
-	signal nCS : std_logic;    
-	signal R_nW : std_logic;    
+	
+	-- Video control signals
+	signal video_page           : std_logic;                     -- 0 : Page 0 | 1 : Page 1
+	signal video_addr_latched   : std_logic_vector(15 downto 0); -- latched by $9C02 (hi) + $9C01 (lo)
+	signal video_pixel		    : std_logic_vector( 7 downto 0);
+	signal video_addr_crtc      : std_logic_vector(15 downto 0);
+				
+	-- CRTC    
+	signal Clk_CRTC : std_logic;              
 	signal DI : std_logic_vector(7 downto 0);  
 	signal DO : std_logic_vector(7 downto 0);
 	signal VSYNC : std_logic;
 	signal HSYNC : std_logic;
 	signal DE : std_logic;
-	signal FIELD : std_logic;
 	signal MA : std_logic_vector(9 downto 0);
 	signal RA : std_logic_vector(2 downto 0);
 	signal CURSOR :  STD_LOGIC;
@@ -247,7 +260,6 @@ architecture System of Qix is
 	signal RS     :  STD_LOGIC;
 	signal CSn    :  STD_LOGIC;
 	signal RW     :  STD_LOGIC;
-	signal RESETn :  STD_LOGIC;
 	signal REG_INIT: STD_LOGIC; -- used for initial crtc register setting
 	
 	-- PROM buses
@@ -269,7 +281,7 @@ architecture System of Qix is
 	
 	subtype address_range_video is integer range 0 to ((2**nGenRamADDrWidthVideo)-1);
 	type ramDef_video is array(address_range_video) of std_logic_vector((nGenRamDataWidth-1) downto 0);
-	signal RAM_video: ramDef_video;
+	shared variable RAM_video: ramDef_video;
 	
 	subtype address_range_spu is integer range 0 to ((2**nGenRamADDrWidthSPU)-1);
 	type ramDef_spu is array(address_range_spu) of std_logic_vector((nGenRamDataWidth-1) downto 0);
@@ -459,10 +471,21 @@ begin
 		VERT_RST => open
 	);
 	
+	-- pixel mux
+	pix_mux : pixel_mux
+	port map(
+		clk_vid => i_Clk_20M,
+		i_Pixel=> video_pixel,
+		
+		o_R => o_VGA_R4,
+		o_G => o_VGA_G4,
+		o_B => o_VGA_B4
+	);
+	
 	-- TODO !! PIAs !!
 	
 	----------------------------------------------------------------------------------------------------------
-	-- Memory Mapping
+	-- Memory Mapping + Memory latches
 	----------------------------------------------------------------------------------------------------------
 	
 	-- DATA/SOUND MEMORY MAP
@@ -486,6 +509,18 @@ begin
 	process(dual_clock)
 	begin
 		if rising_edge(dual_clock) then
+		
+			-- demux dual RAM data
+			if (dpu_addr(15 downto 10) = "100000") then
+				dual_wram_di <= dpu_do;
+				dual_wram_addr <= dpu_addr(9 downto 0);
+				dual_wram_we <= dpu_we;
+			elsif (vpu_addr(15 downto 10) = "100000") then
+				dual_wram_addr <= vpu_addr(9 downto 0);
+				dual_wram_we <= vpu_we;
+				dual_wram_di <= vpu_do;
+			end if;	
+			
 			if dual_wram_we = '1' then
 				RAM_dual(to_integer(unsigned(dual_wram_addr))) <= dual_wram_di;
 			end if;
@@ -497,6 +532,15 @@ begin
 	process(dpu_clock)
 	begin
 		if rising_edge(dpu_clock) then
+		
+			if ((dpu_addr(15 downto 12) >= X"8") and (dpu_addr(15 downto 12) < X"A"))  then
+				dpu_wram_addr <= dpu_addr(12 downto 0); 
+				dpu_wram_we   <= dpu_we;
+			else 
+				dpu_wram_addr <='0' & X"000"; 
+				dpu_wram_we   <= '0'; 
+			end if;
+
 			if dpu_wram_we = '1' then
 				RAM_dpu(to_integer(unsigned(dpu_wram_addr))) <= dpu_do;
 			end if;
@@ -524,28 +568,86 @@ begin
 	-- $C000 - 11xxxxxxxxxxxxxx R   xxxxxxxx             program ROMs
 	
 	-- $0000 - $7FFF : direct video RAM access - Page 0 $0000-$7FFF / Page 1 $8000-$FFFF
+	process(i_Clk_20M) -- vpu_clock)
+		variable video_h_counter : std_logic_vector(7 downto 0) := X"00";
+	begin
+		if rising_edge(i_Clk_20M) then
+			-- get crtc video address
+			if (HSYNC = '0') then video_h_counter := video_h_counter + X"01"; else video_h_counter := X"00"; end if;
+			video_addr_crtc <= MA(4 downto 0) & RA(2 downto 0) & video_h_counter(7 downto 0);
+			
+--			-- pixel output
+--			o_VGA_R4 <= video_pixel(7 downto 4);-- RA(2 downto 0)&'0'; -- HCC(7 downto 4), -- ROW_IND & "000", -- linecount(3 downto 0),
+--			o_VGA_G4 <= video_pixel(7 downto 4);-- RA(2 downto 0)&'0'; -- V & "000", -- linecount(7 downto 4),
+--			o_VGA_B4 <= video_pixel(3 downto 0);-- MA(3 downto 0); -- linecount(3 downto 0),		
+	
+			if vpu_addr = nVideoAddrLatch and vpu_we = '1' then
+				-- video access latch ($9400)
+				vpu_wram_video_addr <= video_addr_latched;
+			elsif vpu_addr(15) = '0' then
+				vpu_wram_video_addr <= video_page & vpu_addr(14 downto 0); 
+				vpu_wram_video_we   <= vpu_we;	
+			else 
+				vpu_wram_video_addr <= X"0000";
+				vpu_wram_video_we   <=  '0';
+			end if;				
+		
+			if vpu_wram_video_we = '1' then		
+				-- video page select
+				if (vpu_addr = nVideoAddrLatchHi) then video_page <= vpu_do(7); end if;
+			end if;		
+		end if;
+	end process;
+--	
+	-- $8000 - $9FFF : video control memory ($8000-$8400 = dual port RAM -> shared with data CPU)
 	process(vpu_clock)
 	begin
 		if rising_edge(vpu_clock) then
-			if vpu_wram_video_we = '1' then
-				RAM_video(to_integer(unsigned(vpu_wram_video_addr))) <= vpu_do;
+			if ((vpu_addr(15 downto 12) >= X"8") and (vpu_addr(15 downto 12) < X"A")) then
+				vpu_wram_addr       <= vpu_addr(12 downto 0); 
+				vpu_wram_we         <= vpu_we;
+			else 
+				vpu_wram_addr       <='0' & X"000";
+				vpu_wram_we         <= '0';
+			end if;
+				
+			if vpu_wram_we = '1' then
+				-- data input
+				RAM_vpu(to_integer(unsigned(vpu_wram_addr))) <= vpu_do;
+				-- video address latch($9402 + $9403)
+				if vpu_addr = nVideoAddrLatchHi then 
+					video_addr_latched(15 downto 8) <= vpu_do; 
+				end if;
+				if vpu_addr = nVideoAddrLatchLo then 
+					video_addr_latched( 7 downto 0) <= vpu_do; 
+				end if;
+			else
+				-- scanline latch ($9800) - RA0-RA2 goes to D0-D2 and MA5-MA9 goes to D3-D7
+				if vpu_addr = nScanlineReadback then 
+					RAM_vpu(nScanlineReadback - 16#8000#) <= MA(9 downto 5) & RA(2 downto 0);
+				end if;
+			end if;								
+			-- data output
+			vpu_wram_do <= RAM_vpu(to_integer(unsigned(vpu_wram_addr)));
+		end if;
+	end process;
+
+	-- Port A
+	process(i_Clk_20M)
+	begin
+		if(rising_edge(i_Clk_20M)) then 
+			if(vpu_wram_video_we = '1') then
+				RAM_video(to_integer(unsigned(vpu_wram_video_addr))) := vpu_do;
 			end if;
 			vpu_wram_video_do <= RAM_video(to_integer(unsigned(vpu_wram_video_addr)));
 		end if;
 	end process;
 	
-	-- $8000 - $9FFF : video control memory ($8000-$8400 = dual port RAM -> shared with data CPU)
-	process(vpu_clock)
+	-- Port B
+	process(i_Clk_20M)
 	begin
-		if rising_edge(vpu_clock) then
-			if vpu_wram_we = '1' then
-				RAM_vpu(to_integer(unsigned(vpu_wram_addr))) <= vpu_do;
-			end if;
-			vpu_wram_do <= RAM_vpu(to_integer(unsigned(vpu_wram_addr)));
-			
-			-- scanline latch ($9800) - RA0-RA2 goes to D0-D2 and MA5-MA9 goes to D3-D7
-			RAM_vpu(nScanlineReadback - 16#8000#) <= MA(9 downto 5) & RA(2 downto 0);
-			
+		if(rising_edge(i_Clk_20M)) then
+			video_pixel <= RAM_video(to_integer(unsigned(video_addr_crtc)));
 		end if;
 	end process;
 	
@@ -562,15 +664,15 @@ begin
 	-- $0000 - 1111xxxxxxxxxxxx R   xxxxxxxx U27         program ROM - Qix
 	
 	-- $0000 - $007F : 6802 internal RAM
-	process(spu_clock)
-	begin
-		if rising_edge(spu_clock) then
-			if spu_wram_we = '1' then
-				RAM_spu(to_integer(unsigned(spu_wram_addr))) <= spu_do;
-			end if;
-			spu_wram_do <= RAM_spu(to_integer(unsigned(spu_wram_addr)));
-		end if;
-	end process;
+--	process(spu_clock)
+--	begin
+--		if rising_edge(spu_clock) then
+--			if spu_wram_we = '1' then
+--				RAM_spu(to_integer(unsigned(spu_wram_addr))) <= spu_do;
+--			end if;
+--			spu_wram_do <= RAM_spu(to_integer(unsigned(spu_wram_addr)));
+--		end if;
+--	end process;
 	
 	--	Data Processor ROM Region -> U12-U19 PROM
 	PROM_U12 : entity work.prom_u12 port map (CLK => dpu_clock, ADDR => dpu_rom_addr, DATA => prom_buses(12));
@@ -611,27 +713,8 @@ begin
 		dpu_wram_do    when dpu_addr(15 downto 8) >= X"84" else
 		dual_wram_do   when dpu_addr(15 downto 10) = "100000" else X"00";
 		
-	-- demux dual RAM data
-	dual_wram_di <= 
-		dpu_do when dpu_addr(15 downto 10) = "100000" else
-		vpu_do when vpu_addr(15 downto 10) = "100000" else
-		dual_wram_do;	
-		
 	-- assign cpu in/out data addresses
-	dpu_rom_addr  <= '0' & dpu_addr(10 downto 0) when dpu_addr(15 downto 12) >= X"A" else X"000";
-	dpu_wram_addr <= dpu_addr(12 downto 0) when ((dpu_addr(15 downto 12) >= X"8") and (dpu_addr(15 downto 12) < X"A")) else '0' & X"000";
-	dpu_wram_we   <= dpu_we                when ((dpu_addr(15 downto 12) >= X"8") and (dpu_addr(15 downto 12) < X"A")) else '0';
-	dual_dpu : process(dpu_addr, vpu_addr)
-	begin
-		if dpu_addr(15 downto 10) = "100000" then
-			dual_wram_addr <= dpu_addr(9 downto 0);
-			dual_wram_we <= dpu_we;
-		end if;
-		if vpu_addr(15 downto 10) = "100000" then
-			dual_wram_addr <= vpu_addr(9 downto 0);
-			dual_wram_we <= vpu_we;
-		end if;
-	end process dual_dpu;
+	dpu_rom_addr  <= dpu_addr(10 downto 0) when dpu_addr(15 downto 12) >= X"A" else "000" & X"00";
 	
 	----------------------------------------------------------------------------------------------------------
 	-- Video Processor i/o control
@@ -651,14 +734,8 @@ begin
 		dual_wram_do   when vpu_addr(15 downto 10) = "100000" else vpu_wram_video_do;
 		
 	-- assign cpu in/out data addresses
-	vpu_wram_video_addr <= vpu_addr when vpu_addr(15) = '0' else X"0000"; -- TODO !! PAGE 0/1 !!
-	vpu_wram_video_we   <= vpu_we   when vpu_addr(15) = '0' else '0';
-	vpu_rom_addr        <= '0' & vpu_addr(10 downto 0) when vpu_addr(15 downto 12) >= X"A" else X"000";
-	vpu_wram_addr       <= vpu_addr(12 downto 0) when ((vpu_addr(15 downto 12) >= X"8") and (vpu_addr(15 downto 12) < X"A")) else '0' & X"000";
-	vpu_wram_we         <= vpu_we                when ((vpu_addr(15 downto 12) >= X"8") and (vpu_addr(15 downto 12) < X"A")) else '0';
-	
-	-- video RAM latch
-	
+	vpu_rom_addr        <= vpu_addr(10 downto 0) when vpu_addr(15 downto 12) >= X"A" else "000" & X"00";
+			
 	----------------------------------------------------------------------------------------------------------
 	-- Sound Processor i/o control
 	----------------------------------------------------------------------------------------------------------
@@ -671,11 +748,24 @@ begin
 	CSn <= '0';
 	RW <= '0';
 	RS <= '1' when vpu_addr = nCrtcLatch1 else '0';
-	DI <= vpu_do when vpu_addr = nCrtcLatch0 or vpu_addr = nCrtcLatch1 else X"00";
+	DI <= vpu_do when (vpu_addr = nCrtcLatch0 or vpu_addr = nCrtcLatch1) and vpu_we = '1' else X"00";
 	
-	o_VGA_R4 <= RA(2 downto 0)&'0'; -- HCC(7 downto 4), -- ROW_IND & "000", -- linecount(3 downto 0),
-	o_VGA_G4 <= RA(2 downto 0)&'0'; -- V & "000", -- linecount(7 downto 4),
-	o_VGA_B4 <= MA(3 downto 0); -- linecount(3 downto 0),		
+	-- horizontal pixel counter
+--	process(i_Clk_20M)
+--	begin
+--		if rising_edge(i_Clk_20M) then
+--			if (HSYNC = '0') then video_h_counter <= video_h_counter + X"01"; else video_h_counter <= X"00"; end if;
+--			
+--			-- current video address (out) -> ((ma << 6) & 0xf800) | ((ra << 8) & 0x0700)
+--			video_addr_crtc <= MA(4 downto 0) & RA(2 downto 0) & video_h_counter(7 downto 0);
+--			video_pixel <= RAM_video(to_integer(unsigned(video_addr_crtc)));
+--		end if;
+--	end process;
+	
+	-- pixel output
+--	o_VGA_R4 <= video_pixel(7 downto 4);-- RA(2 downto 0)&'0'; -- HCC(7 downto 4), -- ROW_IND & "000", -- linecount(3 downto 0),
+--	o_VGA_G4 <= video_pixel(7 downto 4);-- RA(2 downto 0)&'0'; -- V & "000", -- linecount(7 downto 4),
+--	o_VGA_B4 <= video_pixel(3 downto 0);-- MA(3 downto 0); -- linecount(3 downto 0),		
 	
 	
 
