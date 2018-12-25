@@ -225,7 +225,10 @@ architecture System of Qix is
 	signal dual_wram_di    : std_logic_vector( 7 downto 0);
 	signal dual_wram_addr  : std_logic_vector( 9 downto 0);
 	signal dual_wram_we    : std_logic;
-	signal dual_wram_do    : std_logic_vector( 7 downto 0);
+	signal dual_wram_do_a  : std_logic_vector( 7 downto 0);
+	signal dual_wram_do_b  : std_logic_vector( 7 downto 0);
+	signal dual_wren_a     : std_logic;
+	signal dual_wren_b     : std_logic;
 	
 	-- Video control signals
 	signal video_page           : std_logic;                     -- 0 : Page 0 | 1 : Page 1
@@ -253,23 +256,6 @@ architecture System of Qix is
 	-- PROM buses
 	type   prom_buses_array is array (0 to 27) of std_logic_vector(7 downto 0);
 	signal prom_buses : prom_buses_array;
-	
-	-- Generic RAM
-	subtype address_range_dual is integer range 0 to ((2**nGenRamAddrWidthDual)-1);
-	type ramDef_dual is array(address_range_dual) of std_logic_vector((nGenRamDataWidth-1) downto 0);
-	signal RAM_dual: ramDef_dual;
-	
-	subtype address_range_dpu is integer range 0 to ((2**nGenRamAddrWidthDPU)-1);
-	type ramDef_dpu is array(address_range_dpu) of std_logic_vector((nGenRamDataWidth-1) downto 0);
-	signal RAM_dpu: ramDef_dpu;
-	
-	subtype address_range_vpu is integer range 0 to ((2**nGenRamADDrWidthVPU)-1);
-	type ramDef_vpu is array(address_range_vpu) of std_logic_vector((nGenRamDataWidth-1) downto 0);
-	signal RAM_vpu: ramDef_vpu;
-	
-	subtype address_range_spu is integer range 0 to ((2**nGenRamADDrWidthSPU)-1);
-	type ramDef_spu is array(address_range_spu) of std_logic_vector((nGenRamDataWidth-1) downto 0);
-	signal RAM_spu: ramDef_spu;
 		
 begin
 
@@ -458,7 +444,7 @@ begin
 	-- TODO !! PIAs !!
 	
 	----------------------------------------------------------------------------------------------------------
-	-- Memory Mapping + Memory latches
+	-- Memory Mapping
 	----------------------------------------------------------------------------------------------------------
 	
 	-- DATA/SOUND MEMORY MAP
@@ -479,38 +465,37 @@ begin
 	-- $C000 - 11xxxxxxxxxxxxxx R   xxxxxxxx             program ROM : Qix : U12 - U19
 	
 	-- $8000 - $8400 : dual port RAM (shared with video cpu)
-	process(dual_clock)
-	begin
-		if rising_edge(dual_clock) then
-		
-			-- demux dual RAM data
-			if (dpu_addr(15 downto 10) = "100000") then
-				dual_wram_di <= dpu_do;
-				dual_wram_addr <= dpu_addr(9 downto 0);
-				dual_wram_we <= dpu_we;
-			elsif (vpu_addr(15 downto 10) = "100000") then
-				dual_wram_addr <= vpu_addr(9 downto 0);
-				dual_wram_we <= vpu_we;
-				dual_wram_di <= vpu_do;
-			end if;	
-			
-			if dual_wram_we = '1' then
-				RAM_dual(to_integer(unsigned(dual_wram_addr))) <= dual_wram_di;
-			end if;
-			dual_wram_do <= RAM_dual(to_integer(unsigned(dual_wram_addr)));
-		end if;
-	end process;
+	Dual_RAM : work.dpram generic map (nGenRamADDrWidthDual, nGenRamDataWidth)
+	port map
+	(
+		clock_a   => dpu_clock,
+		wren_a    => dual_wren_a,
+		address_a => dpu_addr(9 downto 0),
+		data_a    => dpu_do,
+		q_a       => dual_wram_do_a,
+
+		clock_b   => vpu_clock,
+		wren_b    => dual_wren_b,
+		address_b => vpu_addr(9 downto 0),
+		data_b    => vpu_do,
+		q_b       => dual_wram_do_b
+	);
 	
 	-- $8000 - $9FFF : data control memory ($8000-$8400 = dual port RAM -> shared with video CPU)
-	process(dpu_clock)
-	begin
-		if rising_edge(dpu_clock) then
-			if dpu_wram_we = '1' then
-				RAM_dpu(to_integer(unsigned(dpu_wram_addr))) <= dpu_do;
-			end if;
-			dpu_wram_do <= RAM_dpu(to_integer(unsigned(dpu_wram_addr)));
-		end if;
-	end process;
+	DPU_RAM : work.dpram generic map (nGenRamADDrWidthDPU, nGenRamDataWidth)
+	port map
+	(
+		clock_a   => dpu_clock,
+		wren_a    => dpu_wram_we,
+		address_a => dpu_wram_addr,
+		data_a    => dpu_do,
+		q_a       => dpu_wram_do,
+		
+		clock_b   => '0',
+		address_b => (others => '0'),
+		enable_b  => '0',
+		q_b       => open
+	);
 	
 	-- VIDEO BOARD MEMORY MAP
 	--
@@ -548,29 +533,20 @@ begin
 	);
 	
 	-- $8000 - $9FFF : video control memory ($8000-$8400 = dual port RAM -> shared with data CPU)
-	process(vpu_clock)
-	begin
-		if rising_edge(vpu_clock) then
-			if vpu_wram_we = '1' then
-				-- data input
-				RAM_vpu(to_integer(unsigned(vpu_wram_addr))) <= vpu_do;
-				-- video address latch($9402 + $9403)
-				if vpu_addr = nVideoAddrLatchHi then 
-					video_addr_latched(15 downto 8) <= vpu_do; 
-				end if;
-				if vpu_addr = nVideoAddrLatchLo then 
-					video_addr_latched( 7 downto 0) <= vpu_do; 
-				end if;
-			else
-				-- scanline latch ($9800) - RA0-RA2 goes to D0-D2 and MA5-MA9 goes to D3-D7
-				if vpu_addr = nScanlineReadback then 
-					RAM_vpu(nScanlineReadback - 16#8000#) <= MA(9 downto 5) & RA(2 downto 0);
-				end if;
-			end if;								
-			-- data output
-			vpu_wram_do <= RAM_vpu(to_integer(unsigned(vpu_wram_addr)));
-		end if;
-	end process;
+	VPU_RAM : work.dpram generic map (nGenRamADDrWidthVPU, nGenRamDataWidth)
+	port map
+	(
+		clock_a   => vpu_clock,
+		wren_a    => vpu_wram_we,
+		address_a => vpu_wram_addr,
+		data_a    => vpu_do,
+		q_a       => vpu_wram_do,
+		
+		clock_b   => '0',
+		address_b => (others => '0'),
+		enable_b  => '0',
+		q_b       => open
+	);
 
 	-- Audio CPU:
 	--
@@ -585,15 +561,15 @@ begin
 	-- $0000 - 1111xxxxxxxxxxxx R   xxxxxxxx U27         program ROM - Qix
 	
 	-- $0000 - $007F : 6802 internal RAM
-	process(spu_clock)
-	begin
-		if rising_edge(spu_clock) then
-			if spu_wram_we = '1' then
-				RAM_spu(to_integer(unsigned(spu_wram_addr))) <= spu_do;
-			end if;
-			spu_wram_do <= RAM_spu(to_integer(unsigned(spu_wram_addr)));
-		end if;
-	end process;
+--	process(spu_clock)
+--	begin
+--		if rising_edge(spu_clock) then
+--			if spu_wram_we = '1' then
+--				RAM_spu(to_integer(unsigned(spu_wram_addr))) <= spu_do;
+--			end if;
+--			spu_wram_do <= RAM_spu(to_integer(unsigned(spu_wram_addr)));
+--		end if;
+--	end process;
 	
 	--	Data Processor ROM Region -> U12-U19 PROM
 	PROM_U12 : entity work.prom_u12 port map (CLK => dpu_clock, ADDR => dpu_rom_addr, DATA => prom_buses(12));
@@ -632,12 +608,13 @@ begin
 		prom_buses(13) when dpu_addr(15 downto 8) >= X"C8" else
 		prom_buses(12) when dpu_addr(15 downto 8) >= X"C0" else		
 		dpu_wram_do    when dpu_addr(15 downto 8) >= X"84" else
-		dual_wram_do   when dpu_addr(15 downto 10) = "100000" else X"00";
+		dual_wram_do_a when dpu_addr(15 downto 10) = "100000" else X"00";
 		
 	-- assign cpu in/out data addresses
 	dpu_rom_addr  <= dpu_addr(10 downto 0) when dpu_addr(15 downto 12) >= X"A" else "000" & X"00";
 	dpu_wram_addr <= dpu_addr(12 downto 0) when ((dpu_addr(15 downto 12) >= X"8") and (dpu_addr(15 downto 12) < X"A")) else '0' & X"000";
 	dpu_wram_we   <= dpu_we                when ((dpu_addr(15 downto 12) >= X"8") and (dpu_addr(15 downto 12) < X"A")) else '0';
+	dual_wren_a   <= dpu_we when (dpu_addr(15 downto 10) = "100000") else '0';
 	
 	----------------------------------------------------------------------------------------------------------
 	-- Video Processor i/o control
@@ -645,6 +622,7 @@ begin
 	
 	-- mux cpu in data between roms/io/wram
 	vpu_di <= -- X"00" when vpu_oe = '0' else -- ?
+		MA(9 downto 5) & RA(2 downto 0) when vpu_addr = nScanlineReadback else
 		prom_buses(10) when vpu_addr(15 downto 8) >= X"F8" else
 		prom_buses( 9) when vpu_addr(15 downto 8) >= X"F0" else
 		prom_buses( 8) when vpu_addr(15 downto 8) >= X"E8" else
@@ -654,16 +632,19 @@ begin
 		prom_buses( 4) when vpu_addr(15 downto 8) >= X"C8" else
 		prom_buses( 3) when vpu_addr(15 downto 8) >= X"C0" else		
 		vpu_wram_do    when vpu_addr(15 downto 8) >= X"84" else
-		dual_wram_do   when vpu_addr(15 downto 10) = "100000" else vpu_wram_video_do;
+		dual_wram_do_b when vpu_addr(15 downto 10) = "100000" else vpu_wram_video_do;
 		
-	-- assign cpu in/out data addresses
+	-- assign cpu in/out data addresses and latch data
 	vpu_rom_addr        <= 	vpu_addr(10 downto 0) when vpu_addr(15 downto 12) >= X"A" else "000" & X"00";
-	video_page          <= 	vpu_do(7) when vpu_addr = nVideoAddrLatchHi;	
+	video_page          <= 	vpu_do(7) when vpu_addr = nVideoAddrLatchHi;
+	video_addr_latched(15 downto 8) <= vpu_do when vpu_addr = nVideoAddrLatchHi;
+	video_addr_latched( 7 downto 0) <= vpu_do when vpu_addr = nVideoAddrLatchLo;
 	vpu_wram_video_addr <= 	video_page & vpu_addr(14 downto 0) when vpu_addr(15) = '0' else
 									video_addr_latched when vpu_addr = nVideoAddrLatch and vpu_we = '1' else X"0000";
 	vpu_wram_video_we   <= 	vpu_we  when vpu_addr(15) = '0' else '0';
 	vpu_wram_addr       <= 	vpu_addr(12 downto 0) when ((vpu_addr(15 downto 12) >= X"8") and (vpu_addr(15 downto 12) < X"A")) else '0' & X"000";
 	vpu_wram_we         <= 	vpu_we                when ((vpu_addr(15 downto 12) >= X"8") and (vpu_addr(15 downto 12) < X"A")) else '0';
+	dual_wren_b         <=  vpu_we when (vpu_addr(15 downto 10) = "100000") else '0';
 				
 	----------------------------------------------------------------------------------------------------------
 	-- Sound Processor i/o control
