@@ -362,11 +362,6 @@ set_global_assignment -name VERILOG_FILE SysText.v
 set_global_assignment -name SYSTEMVERILOG_FILE video.sv
 set_global_assignment -name CDF_FILE jtag.cdf
 set_global_assignment -name VHDL_FILE M6800/cpu68.vhd
-set_global_assignment -name VERILOG_FILE M6809/rtl/verilog/alu16.v
-set_global_assignment -name VERILOG_FILE M6809/rtl/verilog/decoders.v
-set_global_assignment -name VERILOG_FILE M6809/rtl/verilog/defs.v
-set_global_assignment -name VERILOG_FILE M6809/rtl/verilog/MC6809_cpu.v
-set_global_assignment -name VERILOG_FILE M6809/rtl/verilog/regblock.v
 set_global_assignment -name VHDL_FILE M6845/config.vhd
 set_global_assignment -name VHDL_FILE M6845/cursor.vhd
 set_global_assignment -name VHDL_FILE M6845/crtc6845.vhd

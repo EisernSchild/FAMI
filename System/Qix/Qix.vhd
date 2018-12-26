@@ -57,25 +57,25 @@ end Qix;
 architecture System of Qix is
 
 -- "M6809/rtl/verilog/MC6809_cpu.v" module definition in VHDL
-	component MC6809_cpu is
-	port (
-		cpu_clk      : in std_logic;                      -- clock
-		cpu_reset    : in std_logic;                      -- reset
-		cpu_nmi_n    : in std_logic;                      -- non-maskable interrupt
-		cpu_irq_n    : in std_logic;                      -- interrupt request
-		cpu_firq_n   : in std_logic;                      -- fast interrupt request
-		cpu_state_o  : out std_logic_vector(5 downto 0);  -- cpu sequencer state (defined in defs.v)
-		cpu_we_o     : out std_logic;                     -- write enabled
-		cpu_oe_o     : out std_logic;                     -- read enabled
-		cpu_addr_o   : out std_logic_vector(15 downto 0); -- cpu address 16 bit
-		cpu_data_i   : in std_logic_vector(7 downto 0);   -- cpu data input 8 bit
-		cpu_data_o   : out std_logic_vector(7 downto 0);  -- cpu data output 8 bit
-		
-		debug_clk    : in std_logic;                      -- debug clock
-		debug_data_o : out std_logic                      -- serial debug info, 64 bit shift register
-	);
-	end component MC6809_cpu;
-	
+--	component MC6809_cpu is
+--	port (
+--		cpu_clk      : in std_logic;                      -- clock
+--		cpu_reset    : in std_logic;                      -- reset
+--		cpu_nmi_n    : in std_logic;                      -- non-maskable interrupt
+--		cpu_irq_n    : in std_logic;                      -- interrupt request
+--		cpu_firq_n   : in std_logic;                      -- fast interrupt request
+--		cpu_state_o  : out std_logic_vector(5 downto 0);  -- cpu sequencer state (defined in defs.v)
+--		cpu_we_o     : out std_logic;                     -- write enabled
+--		cpu_oe_o     : out std_logic;                     -- read enabled
+--		cpu_addr_o   : out std_logic_vector(15 downto 0); -- cpu address 16 bit
+--		cpu_data_i   : in std_logic_vector(7 downto 0);   -- cpu data input 8 bit
+--		cpu_data_o   : out std_logic_vector(7 downto 0);  -- cpu data output 8 bit
+--		
+--		debug_clk    : in std_logic;                      -- debug clock
+--		debug_data_o : out std_logic                      -- serial debug info, 64 bit shift register
+--	);
+--	end component MC6809_cpu;
+--	
 	
 -- The M6845 has 48 external signals; 16 inputs and 32 outputs.
 	component crtc6845 is 
@@ -350,43 +350,43 @@ begin
 	vpu_firq <= '1' when dpu_addr = nFirqTrue else
 					'0' when dpu_addr = nFirqFalse;
 	
-	-- Data Processor : MC6809 1.25MHz
-	Data_Processor : MC6809_cpu
-	port map(
-		cpu_clk      => dpu_clock, -- clock
-		cpu_reset    => i_Reset,   -- reset
-		cpu_nmi_n    => '0',       -- non-maskable interrupt
-		cpu_irq_n    => dpu_irq,   -- interrupt request
-		cpu_firq_n   => dpu_firq,  -- fast interrupt request
-		cpu_state_o  => dpu_state, -- cpu sequencer state (defined in defs.v)
-		cpu_we_o     => dpu_we,    -- write enabled
-		cpu_oe_o     => dpu_oe,    -- read enabled
-		cpu_addr_o   => dpu_addr,  -- cpu address 16 bit
-		cpu_data_i   => dpu_di,    -- cpu data input 8 bit
-		cpu_data_o   => dpu_do,    -- cpu data output 8 bit
-		
-		debug_clk    => '0',       -- debug clock
-		debug_data_o => open       -- serial debug info, 64 bit shift register
-	);
-	
-	-- Video Processor : MC6809 1.25MHz
-	Video_Processor : MC6809_cpu
-	port map(
-		cpu_clk      => vpu_clock, -- clock
-		cpu_reset    => i_Reset,   -- reset
-		cpu_nmi_n    => '0',       -- non-maskable interrupt
-		cpu_irq_n    => vpu_irq,   -- interrupt request
-		cpu_firq_n   => vpu_firq,  -- fast interrupt request
-		cpu_state_o  => vpu_state, -- cpu sequencer state (defined in defs.v)
-		cpu_we_o     => vpu_we,    -- write enabled
-		cpu_oe_o     => vpu_oe,    -- read enabled
-		cpu_addr_o   => vpu_addr,  -- cpu address 16 bit
-		cpu_data_i   => vpu_di,    -- cpu data input 8 bit
-		cpu_data_o   => vpu_do,    -- cpu data output 8 bit
-		
-		debug_clk    => '0',       -- debug clock
-		debug_data_o => open       -- serial debug info, 64 bit shift register
-	);
+--	-- Data Processor : MC6809 1.25MHz
+--	Data_Processor : MC6809_cpu
+--	port map(
+--		cpu_clk      => dpu_clock, -- clock
+--		cpu_reset    => i_Reset,   -- reset
+--		cpu_nmi_n    => '0',       -- non-maskable interrupt
+--		cpu_irq_n    => dpu_irq,   -- interrupt request
+--		cpu_firq_n   => dpu_firq,  -- fast interrupt request
+--		cpu_state_o  => dpu_state, -- cpu sequencer state (defined in defs.v)
+--		cpu_we_o     => dpu_we,    -- write enabled
+--		cpu_oe_o     => dpu_oe,    -- read enabled
+--		cpu_addr_o   => dpu_addr,  -- cpu address 16 bit
+--		cpu_data_i   => dpu_di,    -- cpu data input 8 bit
+--		cpu_data_o   => dpu_do,    -- cpu data output 8 bit
+--		
+--		debug_clk    => '0',       -- debug clock
+--		debug_data_o => open       -- serial debug info, 64 bit shift register
+--	);
+--	
+--	-- Video Processor : MC6809 1.25MHz
+--	Video_Processor : MC6809_cpu
+--	port map(
+--		cpu_clk      => vpu_clock, -- clock
+--		cpu_reset    => i_Reset,   -- reset
+--		cpu_nmi_n    => '0',       -- non-maskable interrupt
+--		cpu_irq_n    => vpu_irq,   -- interrupt request
+--		cpu_firq_n   => vpu_firq,  -- fast interrupt request
+--		cpu_state_o  => vpu_state, -- cpu sequencer state (defined in defs.v)
+--		cpu_we_o     => vpu_we,    -- write enabled
+--		cpu_oe_o     => vpu_oe,    -- read enabled
+--		cpu_addr_o   => vpu_addr,  -- cpu address 16 bit
+--		cpu_data_i   => vpu_di,    -- cpu data input 8 bit
+--		cpu_data_o   => vpu_do,    -- cpu data output 8 bit
+--		
+--		debug_clk    => '0',       -- debug clock
+--		debug_data_o => open       -- serial debug info, 64 bit shift register
+--	);
 	
 	-- Sound Processor : MC6802
 	Sound_Processor : entity work.cpu68
