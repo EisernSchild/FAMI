@@ -76,6 +76,30 @@ architecture System of Qix is
 --	);
 --	end component MC6809_cpu;
 --	
+-- Motorola 6809 CPU
+component mc6809 is
+port 
+(
+	D        : in std_logic_vector(7 downto 0);   -- cpu data input 8 bit
+	DOut     : out std_logic_vector(7 downto 0);  -- cpu data output 8 bit
+	ADDR     : out std_logic_vector(15 downto 0); -- cpu address 16 bit
+	RnW      : out std_logic;                     -- read enabled
+	E        : out std_logic;                     -- output clock E
+	Q        : out std_logic;                     -- output clock Q
+	BS       : out	std_logic;                     -- bus status
+	BA       : out std_logic;                     -- bus available
+	nIRQ     : in std_logic;                      -- interrupt request
+	nFIRQ    : in std_logic;                      -- fast interrupt request
+	nNMI     : in std_logic;                      -- non-maskable interrupt
+	EXTAL    : in std_logic;                      -- input oscillator
+	XTAL     : in std_logic;                      -- input oscillator
+	nHALT    : in std_logic; 							 -- not halt - causes the MPU to stop running
+	nRESET   : in std_logic;                      -- not reset
+	MRDY     : in std_logic;                      -- strech E and Q
+	nDMABREQ : in std_logic;                      -- suspend execution
+	RegData  : out std_logic_vector(111 downto 0) -- register data (debug)
+);
+end component mc6809;
 	
 -- The M6845 has 48 external signals; 16 inputs and 32 outputs.
 	component crtc6845 is 
@@ -350,43 +374,55 @@ begin
 	vpu_firq <= '1' when dpu_addr = nFirqTrue else
 					'0' when dpu_addr = nFirqFalse;
 	
---	-- Data Processor : MC6809 1.25MHz
---	Data_Processor : MC6809_cpu
---	port map(
---		cpu_clk      => dpu_clock, -- clock
---		cpu_reset    => i_Reset,   -- reset
---		cpu_nmi_n    => '0',       -- non-maskable interrupt
---		cpu_irq_n    => dpu_irq,   -- interrupt request
---		cpu_firq_n   => dpu_firq,  -- fast interrupt request
---		cpu_state_o  => dpu_state, -- cpu sequencer state (defined in defs.v)
---		cpu_we_o     => dpu_we,    -- write enabled
---		cpu_oe_o     => dpu_oe,    -- read enabled
---		cpu_addr_o   => dpu_addr,  -- cpu address 16 bit
---		cpu_data_i   => dpu_di,    -- cpu data input 8 bit
---		cpu_data_o   => dpu_do,    -- cpu data output 8 bit
---		
---		debug_clk    => '0',       -- debug clock
---		debug_data_o => open       -- serial debug info, 64 bit shift register
---	);
---	
---	-- Video Processor : MC6809 1.25MHz
---	Video_Processor : MC6809_cpu
---	port map(
---		cpu_clk      => vpu_clock, -- clock
---		cpu_reset    => i_Reset,   -- reset
---		cpu_nmi_n    => '0',       -- non-maskable interrupt
---		cpu_irq_n    => vpu_irq,   -- interrupt request
---		cpu_firq_n   => vpu_firq,  -- fast interrupt request
---		cpu_state_o  => vpu_state, -- cpu sequencer state (defined in defs.v)
---		cpu_we_o     => vpu_we,    -- write enabled
---		cpu_oe_o     => vpu_oe,    -- read enabled
---		cpu_addr_o   => vpu_addr,  -- cpu address 16 bit
---		cpu_data_i   => vpu_di,    -- cpu data input 8 bit
---		cpu_data_o   => vpu_do,    -- cpu data output 8 bit
---		
---		debug_clk    => '0',       -- debug clock
---		debug_data_o => open       -- serial debug info, 64 bit shift register
---	);
+	-- Data Processor : MC6809 1.25MHz
+	dpu_we <= not dpu_oe;
+	Data_Processor : mc6809
+	port map
+	(
+		D        => dpu_di,      -- cpu data input 8 bit
+		DOut     => dpu_do,      -- cpu data output 8 bit
+		ADDR     => dpu_addr,    -- cpu address 16 bit
+		RnW      => dpu_oe,      -- write enabled
+		E        => open,        -- output clock E
+		Q        => open,        -- output clock Q
+		BS       => open,        -- bus status
+		BA       => open,        -- bus available
+		nIRQ     => dpu_irq,     -- interrupt request
+		nFIRQ    => dpu_firq,    -- fast interrupt request
+		nNMI     => '1',         -- non-maskable interrupt
+		EXTAL    => Clk_5M,      -- input oscillator
+		XTAL     => not Clk_5M,  -- input oscillator
+		nHALT    => '1',         -- not halt - causes the MPU to stop running
+		nRESET   => not i_Reset, -- not reset
+		MRDY     => '1',         -- strech E and Q
+		nDMABREQ => '1',         -- suspend execution
+		RegData  => open         -- register data (debug)
+	);
+
+	-- Video Processor : MC6809 1.25MHz
+	vpu_we <= not vpu_oe;
+	Video_Processor : mc6809
+	port map
+	(
+		D        => vpu_di,      -- cpu data input 8 bit
+		DOut     => vpu_do,      -- cpu data output 8 bit
+		ADDR     => vpu_addr,    -- cpu address 16 bit
+		RnW      => vpu_oe,      -- write enabled
+		E        => open,        -- output clock E
+		Q        => open,        -- output clock Q
+		BS       => open,        -- bus status
+		BA       => open,        -- bus available
+		nIRQ     => vpu_irq,     -- interrupt request
+		nFIRQ    => vpu_firq,    -- fast interrupt request
+		nNMI     => '1',         -- non-maskable interrupt
+		EXTAL    => not Clk_5M,  -- input oscillator
+		XTAL     => Clk_5M,      -- input oscillator
+		nHALT    => '1',         -- not halt - causes the MPU to stop running
+		nRESET   => not i_Reset, -- not reset
+		MRDY     => '1',         -- strech E and Q
+		nDMABREQ => '1',         -- suspend execution
+		RegData  => open         -- register data (debug)
+	);
 	
 	-- Sound Processor : MC6802
 	Sound_Processor : entity work.cpu68
