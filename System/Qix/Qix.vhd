@@ -31,14 +31,14 @@ generic
 	constant nGenRamADDrWidthSPU	 : integer := 7;     -- generic RAM SPU address width
 	
 	-- latch address constants
-	constant nFirqTrue         : integer := 16#8C00#; -- FIRQ true (both VPU and DPU)
-	constant nFirqFalse        : integer := 16#8C01#; -- FIRQ true (both VPU and DPU)
-	constant nVideoAddrLatch   : integer := 16#9400#; -- video address latch
-	constant nVideoAddrLatchHi : integer := 16#9402#; -- video address latch hi
-	constant nVideoAddrLatchLo : integer := 16#9403#; -- video address latch lo
-	constant nScanlineReadback : integer := 16#9800#; -- Scanline readback address
-	constant nCrtcLatch0       : integer := 16#9C00#; -- CRTC latch 0
-	constant nCrtcLatch1       : integer := 16#9C01#  -- CRTC latch 1
+	constant nFirqTrue         : std_logic_vector(15 downto 0) := X"8C00"; -- FIRQ true (both VPU and DPU)
+	constant nFirqFalse        : std_logic_vector(15 downto 0) := X"8C01"; -- FIRQ true (both VPU and DPU)
+	constant nVideoAddrLatch   : std_logic_vector(15 downto 0) := X"9400"; -- video address latch
+	constant nVideoAddrLatchHi : std_logic_vector(15 downto 0) := X"9402"; -- video address latch hi
+	constant nVideoAddrLatchLo : std_logic_vector(15 downto 0) := X"9403"; -- video address latch lo
+	constant nScanlineReadback : std_logic_vector(15 downto 0) := X"9800"; -- Scanline readback address
+	constant nCrtcLatch0       : std_logic_vector(15 downto 0) := X"9C00"; -- CRTC latch 0
+	constant nCrtcLatch1       : std_logic_vector(15 downto 0) := X"9C01"  -- CRTC latch 1
 	
 );
 port
