@@ -517,16 +517,15 @@ begin
 	Video_RAM : work.dpram generic map (nGenRamADDrWidthVideo, nGenRamDataWidth)
 	port map
 	(
-		clock_a   => i_Clk_20M,
-		wren_a    => '0',
-		address_a => video_addr_crtc,
-		data_a    => video_pixel,
+		clock_a   => vpu_clock,
+		wren_a    => vpu_wram_video_we,
+		address_a => vpu_wram_video_addr,
+		data_a    => vpu_do,
+		q_a       => vpu_wram_video_do,
 
-		clock_b   => vpu_clock,
-		wren_b    => vpu_wram_video_we,
-		address_b => vpu_wram_video_addr,
-		data_b    => vpu_do,
-		q_b       => vpu_wram_video_do
+		clock_b   => i_Clk_20M,
+		address_b => video_addr_crtc,
+		q_b       => video_pixel
 	);
 	
 	-- $8000 - $9FFF : video control memory ($8000-$8400 = dual port RAM -> shared with data CPU)
