@@ -302,15 +302,21 @@ begin
 	-- alphanumeric terminals, this signal  is  the character rate. The
 	-- video rate or  "dot"  clock  is  externally divided by high-speed
 	-- logic  (TTL)  to generate the  ClK  input.
-	process (i_Clk_20M)
-		variable counter : std_logic_vector(2 downto 0) := "000";
+	--
+	-- Character clock : (MAME source code <qix.h>)
+	-- #define MAIN_CLOCK_OSC          20000000    /* 20 MHz */
+	-- #define QIX_CHARACTER_CLOCK     (20000000/2/16)
+	--
+	-- create clock using 10 MHz clock :
+	process (Clk_10M)
+		variable counter : std_logic_vector(3 downto 0) := "0000";
 		variable E_counter : integer := 0; 
 	begin
-		if rising_edge(i_Clk_20M) then
+		if rising_edge(Clk_10M) then
 		
 			-- create clock
 			counter := counter + 1;
-			if (counter = "100") then Clk_CRTC <= '1'; else Clk_CRTC <= '0'; end if;
+			if (counter = "0001") then Clk_CRTC <= '1'; else Clk_CRTC <= '0'; end if;
 			
 			-- manually init CRTC using E and REG_INIT
 			E_counter := E_counter +1;
@@ -660,7 +666,7 @@ begin
 	
 	-- CRTC latch ($9c00 - $9c01)
 	CSn <= '0';
-	RW <= '0';
+	RW <= not vpu_we;
 	RS <= '1' when vpu_addr = nCrtcLatch1 else '0';
 	DI <= vpu_do when (vpu_addr = nCrtcLatch0 or vpu_addr = nCrtcLatch1) and vpu_we = '1' else X"00";
 	
@@ -710,8 +716,8 @@ begin
 	--	end process;
 		
 	-- pixel output
-	o_VGA_R4 <= video_pixel(7 downto 4);--"1000" when dpu_addr = X"8C00" else "0000"; -- video_pixel(7 downto 4); -- Clk_E_dpu & "000"; -- vpu_rom_addr(7 downto 4);-- RA(2 downto 0)&'0'; 
-	o_VGA_G4 <= video_pixel(7 downto 4);--"1000" when dpu_addr = X"8C01" else "0000"; --dpu_addr(11 downto 8); --video_pixel(7 downto 4); --Clk_Q_dpu & "000"; --vpu_do(7 downto 4);--- RA(2 downto 0)&'0';
-	o_VGA_B4 <= video_pixel(3 downto 0);--"1000" when dpu_addr >= X"C000" else "0000"; --dpu_addr(7 downto 4); -- video_pixel(3 downto 0); --Clk_E_vpu & "000"; --vpu_rom_addr(3 downto 0);-- MA(3 downto 0);		
+	o_VGA_R4 <= video_pixel(7 downto 4);
+	o_VGA_G4 <= video_pixel(7 downto 4);
+	o_VGA_B4 <= video_pixel(3 downto 0);
 
 end System;
