@@ -220,9 +220,12 @@ end component mc6809;
 	signal spu_rom_addr   : std_logic_vector(10 downto 0);
 		
 	-- dual RAM (Data+Video) Memory Signals
-	signal dual_clock      : std_logic;
-	signal dual_wram_di    : std_logic_vector( 7 downto 0);
-	signal dual_wram_addr  : std_logic_vector( 9 downto 0);
+	signal dual_clock_w    : std_logic;
+	signal dual_clock_r    : std_logic;
+	signal dual_wram_di_a  : std_logic_vector( 7 downto 0);
+	signal dual_wram_di_b  : std_logic_vector( 7 downto 0);
+	signal dual_wram_addr_a: std_logic_vector( 9 downto 0);
+	signal dual_wram_addr_b: std_logic_vector( 9 downto 0);
 	signal dual_wram_we    : std_logic;
 	signal dual_wram_do_a  : std_logic_vector( 7 downto 0);
 	signal dual_wram_do_b  : std_logic_vector( 7 downto 0);
@@ -298,7 +301,12 @@ begin
 	dpu_clock <= Clk_E_dpu;
 	vpu_clock <= Clk_E_vpu;
 	spu_clock <= i_Clk_0921K;
-	dual_clock<= i_Clk_20M;
+	dual_clock_w <= vpu_clock when vpu_we = '1' else dpu_clock;
+	dual_clock_r <= dpu_clock when vpu_we = '1' else vpu_clock;
+	dual_wram_addr_a   <= vpu_addr(9 downto 0) when vpu_we = '1' else dpu_addr(9 downto 0);
+	dual_wram_addr_b   <= dpu_addr(9 downto 0) when vpu_we = '1' else vpu_addr(9 downto 0);
+	dual_wram_di_a     <= vpu_do               when vpu_we = '1' else dpu_do;
+	dual_wram_di_b     <= dpu_do               when vpu_we = '1' else vpu_do;
 	
 	-- create clock Clk_CRTC :
 	-- All timing  in  the  CRTC  is  derived from the  ClK  input.  In
@@ -479,16 +487,16 @@ begin
 	Dual_RAM : work.dpram generic map (nGenRamADDrWidthDual, nGenRamDataWidth)
 	port map
 	(
-		clock_a   => dpu_clock,
+		clock_a   => dual_clock_w, -- dpu_clock,
 		wren_a    => dual_wren_a,
-		address_a => dpu_addr(9 downto 0),
-		data_a    => dpu_do,
+		address_a => dual_wram_addr_a,
+		data_a    => dual_wram_di_a,
 		q_a       => dual_wram_do_a,
 
-		clock_b   => vpu_clock,
-		wren_b    => dual_wren_b,
-		address_b => vpu_addr(9 downto 0),
-		data_b    => vpu_do,
+		clock_b   => dual_clock_r, --vpu_clock,
+		-- wren_b    => dual_wren_b,    -- = '0' !!!!
+		address_b => dual_wram_addr_b,
+		-- data_b    => dual_wram_di_b, -- no input here !!!!
 		q_b       => dual_wram_do_b
 	);
 	
@@ -619,13 +627,15 @@ begin
 		prom_buses(13) when dpu_addr(15 downto 8) >= X"C8" else
 		prom_buses(12) when dpu_addr(15 downto 8) >= X"C0" else		
 		dpu_wram_do    when dpu_addr(15 downto 8) >= X"84" else
-		dual_wram_do_a when dpu_addr(15 downto 10) = "100000" else X"00";
+		dual_wram_do_a when dpu_addr(15 downto 10) = "100000" and vpu_we = '0' else
+		dual_wram_do_b when dpu_addr(15 downto 10) = "100000"	else X"00";
 		
 	-- assign cpu in/out data addresses
 	dpu_rom_addr  <= dpu_addr(10 downto 0) when dpu_addr(15 downto 12) >= X"A" else "000" & X"00";
 	dpu_wram_addr <= dpu_addr(12 downto 0) when ((dpu_addr(15 downto 12) >= X"8") and (dpu_addr(15 downto 12) < X"A")) else '0' & X"000";
 	dpu_wram_we   <= dpu_we                when ((dpu_addr(15 downto 12) >= X"8") and (dpu_addr(15 downto 12) < X"A")) else '0';
-	dual_wren_a   <= dpu_we when (dpu_addr(15 downto 10) = "100000") else '0';
+	dual_wren_a   <= vpu_we when vpu_we = '1' else 
+						  dpu_we when (dpu_addr(15 downto 10) = "100000") else '0';
 	
 	----------------------------------------------------------------------------------------------------------
 	-- Video Processor i/o control
@@ -645,6 +655,7 @@ begin
 		prom_buses( 4) when vpu_addr(15 downto 8) >= X"C8" else
 		prom_buses( 3) when vpu_addr(15 downto 8) >= X"C0" else		
 		vpu_wram_do    when vpu_addr(15 downto 8) >= X"84" else
+		dual_wram_do_a when vpu_addr(15 downto 10) = "100000" and vpu_we = '1' else
 		dual_wram_do_b when vpu_addr(15 downto 10) = "100000" else vpu_wram_video_do;
 		
 	-- assign cpu in/out data addresses and latch data
@@ -657,7 +668,8 @@ begin
 	vpu_wram_video_we   <= 	vpu_we  when vpu_addr(15) = '0' else '0';
 	vpu_wram_addr       <= 	vpu_addr(12 downto 0) when ((vpu_addr(15 downto 12) >= X"8") and (vpu_addr(15 downto 12) < X"A")) else '0' & X"000";
 	vpu_wram_we         <= 	vpu_we                when ((vpu_addr(15 downto 12) >= X"8") and (vpu_addr(15 downto 12) < X"A")) else '0';
-	dual_wren_b         <=  vpu_we when (vpu_addr(15 downto 10) = "100000") else '0';
+	dual_wren_b         <=  dpu_we when vpu_we = '1' else 
+									vpu_we when (vpu_addr(15 downto 10) = "100000") else '0';
 				
 	----------------------------------------------------------------------------------------------------------
 	-- Sound Processor i/o control
@@ -682,7 +694,9 @@ begin
 	begin
 		if rising_edge(i_Clk_20M) then
 			-- get crtc video address
-			if (HSYNC = '0') then video_h_counter := video_h_counter + X"01"; else video_h_counter := X"00"; end if;
+			-- if (HSYNC = '0') then 
+			video_h_counter := video_h_counter + X"01"; 
+			-- else video_h_counter := X"00"; end if;
 			video_addr_crtc <= MA(4 downto 0) & RA(2 downto 0) & video_h_counter(7 downto 0);
 			
 			
@@ -723,7 +737,9 @@ begin
 --			variable counter : std_logic_vector(7 downto 0) := X"00";
 --		begin
 --			if rising_edge(dpu_clock) then
---				if counter < X"FF" then counter := counter + X"01"; end if;			
+--				-- if counter < X"FF" then 
+--				counter := counter + X"01"; 
+--				-- end if;			
 --				debug_dpu(to_integer(unsigned(counter))) <= dpu_addr;
 --				debug_dpu_we(to_integer(unsigned(counter))) <= dpu_we;
 --			end if;
@@ -733,9 +749,11 @@ begin
 --			variable counter : std_logic_vector(7 downto 0) := X"00";
 --		begin
 --			if rising_edge(vpu_clock) then
---				if counter < X"FF" then counter := counter + X"01"; end if;			
+--				-- if counter < X"FF" then 
+--				counter := counter + X"01"; 
+--				-- end if;			
 --				debug_vpu(to_integer(unsigned(counter))) <= vpu_addr;
---				debug_vpu_we(to_integer(unsigned(counter))) <= dpu_we;
+--				debug_vpu_we(to_integer(unsigned(counter))) <= vpu_we;
 --			end if;
 --		end process;
 		
