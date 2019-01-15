@@ -692,7 +692,8 @@ begin
 	
 	process(i_Clk_20M)
 		variable video_h_counter : std_logic_vector(7 downto 0) := X"00";
-		variable d_addr : std_logic_vector(15 downto 0) := X"0000";
+		variable d_addr_vpu : std_logic_vector(15 downto 0) := X"0000";
+		variable d_addr_dpu : std_logic_vector(15 downto 0) := X"0000";
 		variable rgb : std_logic_vector(2 downto 0) := "000";
 		variable rgb_dpu : std_logic_vector(2 downto 0) := "000";
 		
@@ -707,21 +708,21 @@ begin
 			
 			----- DEBUG OPTIONS :
 			
---						d_addr := debug_vpu(to_integer(unsigned(video_h_counter)));	
+--						d_addr_vpu := debug_vpu(to_integer(unsigned(video_h_counter)));	
 --						
---						if (d_addr < X"8000") then rgb := "100"; end if;                         --- VIDEO : RED
---						if (d_addr >= X"8000") and (d_addr < X"9000") then rgb := "010"; end if; --- DUAL, CMOS, FIRQ : GREEN
---						if (d_addr >= X"9000") and (d_addr < X"9C00") then rgb := "001"; end if; --- PALETTE : BLUE
---						if (d_addr >= X"9C00") and (d_addr < X"C000") then rgb := "101"; end if; --- CRTC : PINK
---						if (d_addr >= X"C000") then rgb := "111"; end if;                        --- ROMS : GREY
+--						if (d_addr_vpu < X"8000") then rgb := "100"; end if;                             --- VIDEO : RED
+--						if (d_addr_vpu >= X"8000") and (d_addr_vpu < X"8400") then rgb := "010"; end if; --- DUAL : GREEN
+--						if (d_addr_vpu >= X"8400") and (d_addr_vpu < X"8800") then rgb := "001"; end if; --- CMOS : BLUE
+--						if (d_addr_vpu >= X"8800") and (d_addr_vpu < X"C000") then rgb := "101"; end if; --- FIRQ, PALETTE, CRTC : PINK
+--						if (d_addr_vpu >= X"C000") then rgb := "111"; end if;                            --- ROMS : GREY
 --						
---						d_addr := debug_dpu(to_integer(unsigned(video_h_counter)));	
+--						d_addr_dpu := debug_dpu(to_integer(unsigned(video_h_counter)));	
 --						
---						if (d_addr < X"8400") then rgb_dpu := "100"; end if;                         --- DUAL : RED
---						if (d_addr >= X"8400") and (d_addr < X"9000") then rgb_dpu := "010"; end if; --- LOCAL, ACIA, FIRQ : GREEN
---						if (d_addr >= X"9000") and (d_addr < X"9900") then rgb_dpu := "001"; end if; --- PIA 1 2 : BLUE
---						if (d_addr >= X"9900") and (d_addr < X"A000") then rgb_dpu := "101"; end if; --- PIA 3 4 : PINK
---						if (d_addr >= X"A000") then rgb_dpu := "111"; end if;								  --- ROMS : GREY
+--						if (d_addr_dpu < X"8400") then rgb_dpu := "100"; end if;                             --- DUAL : RED
+--						if (d_addr_dpu >= X"8400") and (d_addr_dpu < X"9000") then rgb_dpu := "010"; end if; --- LOCAL, ACIA, FIRQ : GREEN
+--						if (d_addr_dpu >= X"9000") and (d_addr_dpu < X"9900") then rgb_dpu := "001"; end if; --- PIA 1 2 : BLUE
+--						if (d_addr_dpu >= X"9900") and (d_addr_dpu < X"A000") then rgb_dpu := "101"; end if; --- PIA 3 4 : PINK
+--						if (d_addr_dpu >= X"A000") then rgb_dpu := "111"; end if;								    --- ROMS : GREY
 --						
 --						if RA = "100" then o_VGA_R4 <= rgb(2) & "000";  
 --						elsif RA = "101" then o_VGA_R4 <= debug_vpu_we(to_integer(unsigned(video_h_counter))) & "000"; 
