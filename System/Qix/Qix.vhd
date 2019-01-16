@@ -232,6 +232,10 @@ end component mc6809;
 	signal dual_wren_a     : std_logic;
 	signal dual_wren_b     : std_logic;
 	
+	-- CMOS signals (data-out and write-enabled)
+	signal cmos_do         : std_logic_vector( 7 downto 0);
+	signal cmos_we         : std_logic;
+	
 	-- Video control signals
 	signal video_page           : std_logic;                     -- 0 : Page 0 | 1 : Page 1
 	signal video_addr_latched   : std_logic_vector(15 downto 0); -- latched by $9C02 (hi) + $9C01 (lo)
@@ -556,6 +560,7 @@ begin
 	);
 	
 	-- $8000 - $9FFF : video control memory ($8000-$8400 = dual port RAM -> shared with data CPU)
+	--                                      ($8400-$8800 = CMOS)
 	VPU_RAM : work.dpram generic map (nGenRamADDrWidthVPU, nGenRamDataWidth)
 	port map
 	(
@@ -569,6 +574,17 @@ begin
 		address_b => (others => '0'),
 		enable_b  => '0',
 		q_b       => open
+	);
+	
+	-- $8400 - $8800 : CMOS
+	CMOS_RAM : entity work.qix_cmos_ram 
+	generic map( dWidth => 8, aWidth => 10)
+	port map(
+		clk  => vpu_clock,
+		we   => cmos_we,
+		addr => vpu_addr(9 downto 0),
+		d    => vpu_do,
+		q    => cmos_do
 	);
 
 	-- Audio CPU:
@@ -648,6 +664,7 @@ begin
 	
 	-- mux cpu in data between roms/io/wram
 	vpu_di <= -- X"00" when vpu_oe = '0' else -- ?
+		cmos_do when (vpu_addr >= X"8400") and (vpu_addr < X"8800") else
 		DO when (vpu_addr = nCrtcLatch0 or vpu_addr = nCrtcLatch1) else
 		X"FF" when (vpu_addr = X"8C00" or vpu_addr = X"8C01") and vpu_we = '0' else
 		MA(9 downto 5) & RA(2 downto 0) when vpu_addr = nScanlineReadback else
@@ -675,6 +692,7 @@ begin
 	vpu_wram_we         <= 	vpu_we                when ((vpu_addr(15 downto 12) >= X"8") and (vpu_addr(15 downto 12) < X"A")) else '0';
 	dual_wren_b         <=  dpu_we when vpu_we = '1' else 
 									vpu_we when (vpu_addr(15 downto 10) = "100000") else '0';
+	cmos_we             <=  vpu_we when (vpu_addr >= X"8400") and (vpu_addr < X"8800") else '0';
 				
 	----------------------------------------------------------------------------------------------------------
 	-- Sound Processor i/o control

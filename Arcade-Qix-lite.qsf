@@ -360,6 +360,7 @@ set_global_assignment -name CDF_FILE output_files/Chain1.cdf
 set_global_assignment -name VHDL_FILE dpram.vhd
 set_global_assignment -name VHDL_FILE "Arcade-Taito.vhd"
 set_global_assignment -name VHDL_FILE System/Qix/Qix.vhd
+set_global_assignment -name VHDL_FILE System/Qix/Qix_cmos_ram.vhd
 set_global_assignment -name VERILOG_FILE SysTextFont.v
 set_global_assignment -name VERILOG_FILE SysText.v
 set_global_assignment -name SYSTEMVERILOG_FILE video.sv
