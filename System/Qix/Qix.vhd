@@ -259,6 +259,37 @@ end component mc6809;
 	signal RW     :  STD_LOGIC;
 	signal REG_INIT: STD_LOGIC; -- used for initial crtc register setting
 	
+	--	   PIA 0 = U11: (mapped to $9400 on the data CPU)
+	--        port A = external input (input_port_0)
+	--        port B = external input (input_port_1) (coin)
+	signal pia_dpu_clock : std_logic;
+	signal pia_0_cs      : std_logic;
+	signal pia_0_rw_n    : std_logic;
+	signal pia_0_do      : std_logic_vector( 7 downto 0);
+	signal pia_0_pa_i    : std_logic_vector( 7 downto 0);
+	signal pia_0_pb_i    : std_logic_vector( 7 downto 0);
+	signal pia_0_cb2_o   : std_logic;
+	
+	--    PIA 1 = U20: (mapped to $9800/$9900 on the data CPU)
+	--        port A = external input (input_port_2)
+	--        port B = external input (input_port_3)
+	signal pia_1_cs      : std_logic;
+	signal pia_1_rw_n    : std_logic;
+	signal pia_1_do      : std_logic_vector( 7 downto 0);
+	signal pia_1_pa_i    : std_logic_vector( 7 downto 0);
+	signal pia_1_pb_i    : std_logic_vector( 7 downto 0);
+	signal pia_1_cb2_o   : std_logic;
+	
+	--    PIA 2 = U30: (mapped to $9c00 on the data CPU)
+	--        port A = external input (input_port_4)
+	--        port B = external output (coin control)
+	signal pia_2_cs      : std_logic;
+	signal pia_2_rw_n    : std_logic;
+	signal pia_2_do      : std_logic_vector( 7 downto 0);
+	signal pia_2_pa_i    : std_logic_vector( 7 downto 0);
+	signal pia_2_pb_i    : std_logic_vector( 7 downto 0);
+	signal pia_2_cb2_o   : std_logic;
+	
 	-- PROM buses
 	type   prom_buses_array is array (0 to 27) of std_logic_vector(7 downto 0);
 	signal prom_buses : prom_buses_array;
@@ -306,10 +337,11 @@ begin
 		end if;
 	end process generate_Clks;
 	
-	-- assign processor clocks
+	-- assign clocks
 	dpu_clock <= Clk_E_dpu;
 	vpu_clock <= Clk_E_vpu;
 	spu_clock <= i_Clk_0921K;
+	pia_dpu_clock <= not dpu_clock;
 	dual_clock_w <= vpu_clock when vpu_we = '1' else dpu_clock;
 	dual_clock_r <= dpu_clock when vpu_we = '1' else vpu_clock;
 	dual_wram_addr_a   <= vpu_addr(9 downto 0) when vpu_we = '1' else dpu_addr(9 downto 0);
@@ -469,7 +501,143 @@ begin
 		VERT_RST => open
 	);
 	
-	-- TODO !! PIAs !!
+	--	   PIA 0 = U11: (mapped to $9400 on the data CPU)
+	--        port A = external input (input_port_0)
+	--        port B = external input (input_port_1) (coin)
+	pia_0 : entity work.pia6821
+	port map
+	(	
+		clk       	=> pia_dpu_clock,
+		rst       	=> i_Reset,
+		cs        	=> pia_0_cs,
+		rw        	=> pia_0_rw_n,
+		addr      	=> dpu_addr(1 downto 0),
+		data_in   	=> dpu_do,
+		data_out  	=> pia_0_do,
+		irqa      	=> open,
+		irqb      	=> open,
+		pa_i      	=> pia_0_pa_i,
+		pa_o        => open,
+		pa_oe       => open,
+		ca1       	=> '0',
+		ca2_i      	=> '0',
+		ca2_o       => open,
+		ca2_oe      => open,
+		pb_i      	=> pia_0_pb_i,
+		pb_o        => open,
+		pb_oe       => open,
+		cb1       	=> '0',
+		cb2_i      	=> '0',
+		cb2_o       => pia_0_cb2_o,
+		cb2_oe      => open
+	);	
+	
+	--    PIA 1 = U20: (mapped to $9800/$9900 on the data CPU)
+	--        port A = external input (input_port_2)
+	--        port B = external input (input_port_3)
+	pia_1 : entity work.pia6821
+	port map
+	(	
+		clk       	=> pia_dpu_clock,
+		rst       	=> i_Reset,
+		cs        	=> pia_1_cs,
+		rw        	=> pia_1_rw_n,
+		addr      	=> dpu_addr(1 downto 0),
+		data_in   	=> dpu_do,
+		data_out  	=> pia_1_do,
+		irqa      	=> open,
+		irqb      	=> open,
+		pa_i      	=> pia_1_pa_i,
+		pa_o        => open,
+		pa_oe       => open,
+		ca1       	=> '0',
+		ca2_i      	=> '0',
+		ca2_o       => open,
+		ca2_oe      => open,
+		pb_i      	=> pia_1_pb_i,
+		pb_o        => open,
+		pb_oe       => open,
+		cb1       	=> '0',
+		cb2_i      	=> '0',
+		cb2_o       => pia_1_cb2_o,
+		cb2_oe      => open
+	);	
+	
+	--    PIA 2 = U30: (mapped to $9c00 on the data CPU)
+	--        port A = external input (input_port_4)
+	--        port B = external output (coin control)
+	pia_2 : entity work.pia6821
+	port map
+	(	
+		clk       	=> pia_dpu_clock,
+		rst       	=> i_Reset,
+		cs        	=> pia_2_cs,
+		rw        	=> pia_2_rw_n,
+		addr      	=> dpu_addr(1 downto 0),
+		data_in   	=> dpu_do,
+		data_out  	=> pia_2_do,
+		irqa      	=> open,
+		irqb      	=> open,
+		pa_i      	=> pia_2_pa_i,
+		pa_o        => open,
+		pa_oe       => open,
+		ca1       	=> '0',
+		ca2_i      	=> '0',
+		ca2_o       => open,
+		ca2_oe      => open,
+		pb_i      	=> pia_2_pb_i,
+		pb_o        => open,
+		pb_oe       => open,
+		cb1       	=> '0',
+		cb2_i      	=> '0',
+		cb2_o       => pia_2_cb2_o,
+		cb2_oe      => open
+	);	
+	
+	--    PIA 3 = U20: (mapped to $9000 on the data CPU)
+	--        port A = data CPU to sound CPU communication
+	--        port B = stereo volume control, 2 4-bit values
+	--        CA1 = interrupt signal from sound CPU
+	--        CA2 = interrupt signal to sound CPU
+	--        CB1 = VS input signal (vertical sync)
+	--        CB2 = INV output signal (cocktail flip)
+	--        IRQA = /DINT1 signal
+	--        IRQB = /DINT1 signal
+	--
+	
+	--    PIA 4 = U8: (mapped to $4000 on the sound CPU)
+	--        port A = sound CPU to data CPU communication
+	--        port B = DAC value (port B)
+	--        CA1 = interrupt signal from data CPU
+	--        CA2 = interrupt signal to data CPU
+	--        IRQA = /SINT1 signal
+	--        IRQB = /SINT1 signal
+	--
+	
+	--    PIA 5 = U7: (never actually used, mapped to $2000 on the sound CPU)
+	--        port A = unused
+	--        port B = sound CPU to TMS5220 communication
+	--        CA1 = interrupt signal from TMS5220
+	--        CA2 = write signal to TMS5220
+	--        CB1 = ready signal from TMS5220
+	--        CB2 = read signal to TMS5220
+	--        IRQA = /SINT2 signal
+	--        IRQB = /SINT2 signal
+
+	-- SOUND PIA U20
+	--
+	-- Both ports of PIA U20 have been dedicated to the control of the 
+	-- Sound Processor. Port A is used to select a sound number, which 
+	-- is initiated by strobbing the U20 (CA2) - US (CA1) interrupt line. 
+	-- Responses can be made using the reverse U8 (CA2) - U20 (CA1) 
+	-- interrupt. Port B is used to control the amplitude of the generated 
+	-- sound to the Stereo Amplifiers. The output of side B go to U24 and 
+	-- U28, which vary the ratio of the voltage divider across the non- 
+	-- inverting inputs of U29 and LI30. This allows balance control of the 
+	-- sound to coincide with real time events occuring on the screen.
+	--
+	-- DINT is connected to the data CPU's IRQ line
+	-- SINT is connected to the sound CPU's IRQ line
 	
 	----------------------------------------------------------------------------------------------------------
 	-- Memory Mapping
@@ -600,15 +768,20 @@ begin
 	-- $0000 - 1111xxxxxxxxxxxx R   xxxxxxxx U27         program ROM - Qix
 	
 	-- $0000 - $007F : 6802 internal RAM
---	process(spu_clock)
---	begin
---		if rising_edge(spu_clock) then
---			if spu_wram_we = '1' then
---				RAM_spu(to_integer(unsigned(spu_wram_addr))) <= spu_do;
---			end if;
---			spu_wram_do <= RAM_spu(to_integer(unsigned(spu_wram_addr)));
---		end if;
---	end process;
+	SPU_RAM : work.dpram generic map (8, 8)
+	port map
+	(
+		clock_a   => spu_clock,
+		wren_a    => spu_wram_we,
+		address_a => spu_wram_addr(7 downto 0),
+		data_a    => spu_do,
+		q_a       => spu_wram_do,
+		
+		clock_b   => '0',
+		address_b => (others => '0'),
+		enable_b  => '0',
+		q_b       => open
+	);
 	
 	--	Data Processor ROM Region -> U12-U19 PROM
 	PROM_U12 : entity work.prom_u12 port map (CLK => dpu_clock, ADDR => dpu_rom_addr, DATA => prom_buses(12));
@@ -637,7 +810,10 @@ begin
 	----------------------------------------------------------------------------------------------------------
 	
 	-- mux cpu in data between roms/io/wram
-	dpu_di <= -- X"00" when dpu_oe = '0' else -- ?
+	dpu_di <=
+		pia_0_do when dpu_addr(15 downto 10) = "100101" else 
+		pia_1_do when dpu_addr(15 downto 10) = "100110" and dpu_addr(8) = '1' else
+		pia_2_do  when dpu_addr(15 downto 10) = "100111" else
 		X"FF" when (dpu_addr = X"8C00" or dpu_addr = X"8C01") and dpu_we = '0' else
 		prom_buses(19) when dpu_addr(15 downto 8) >= X"F8" else
 		prom_buses(18) when dpu_addr(15 downto 8) >= X"F0" else
@@ -663,7 +839,7 @@ begin
 	----------------------------------------------------------------------------------------------------------
 	
 	-- mux cpu in data between roms/io/wram
-	vpu_di <= -- X"00" when vpu_oe = '0' else -- ?
+	vpu_di <= 
 		cmos_do when (vpu_addr >= X"8400") and (vpu_addr < X"8800") else
 		DO when (vpu_addr = nCrtcLatch0 or vpu_addr = nCrtcLatch1) else
 		X"FF" when (vpu_addr = X"8C00" or vpu_addr = X"8C01") and vpu_we = '0' else
@@ -697,6 +873,70 @@ begin
 	----------------------------------------------------------------------------------------------------------
 	-- Sound Processor i/o control
 	----------------------------------------------------------------------------------------------------------
+	
+	----------------------------------------------------------------------------------------------------------
+	-- PIAs i/o control
+	----------------------------------------------------------------------------------------------------------
+		
+	pia_0_cs <= '1' when dpu_addr(15 downto 10) = "100101" else '0';                       -- DPU Addr : 100101--------xx : PIA 0
+	pia_1_cs <= '1' when dpu_addr(15 downto 10) = "100110" and dpu_addr(8) = '1' else '0'; -- DPU Addr : 100110-1------xx : PIA 1
+	pia_2_cs <= '1' when dpu_addr(15 downto 10) = "100111" else '0';                       -- DPU Addr : 100111--------xx : PIA 2
+	
+	pia_0_rw_n <= '0' when dpu_we = '1' and dpu_addr(15 downto 10) = "100101" else '1';                       -- DPU Addr : 100101--------xx : PIA 0
+	pia_1_rw_n <= '0' when dpu_we = '1' and dpu_addr(15 downto 10) = "100110" and dpu_addr(8) = '1' else '1'; -- DPU Addr : 100110-1------xx : PIA 1
+	pia_2_rw_n <= '0' when dpu_we = '1' and dpu_addr(15 downto 10) = "100111" else '1';                       -- DPU Addr : 100111--------xx : PIA 2
+	
+	-- pia 0 port a
+	--      bit 0  Up
+	--      bit 1  Right
+	--      bit 2  Down
+	--      bit 3  Left
+	--      bit 4  Button 2
+	--      bit 5  Start 2
+	--      bit 6  Start 1
+	--      bit 7  Button 1
+	pia_0_pa_i(0) <= '0'; -- btn_X;
+	pia_0_pa_i(1) <= '0'; -- btn_X;
+	pia_0_pa_i(2) <= '0'; -- btn_X;
+	pia_0_pa_i(3) <= '0'; -- btn_X;
+	pia_0_pa_i(4) <= '0'; -- btn_X;
+	pia_0_pa_i(5) <= '0'; -- btn_X;
+	pia_0_pa_i(6) <= '0'; -- btn_X;
+	pia_0_pa_i(7) <= '0'; -- btn_X;
+	
+	-- pia 0 port b
+	--      bit 7..0 Coin
+	pia_0_pb_i(7 downto 0) <= X"00";
+	
+	-- pia 1 port a - SPARE
+	--      bit 7..0 Unknown
+	pia_1_pa_i(7 downto 0) <= X"00";
+	
+	-- pia 1 port b - PLAYER 1/2
+	--      bit 7..0 Unknown
+	pia_1_pb_i(7 downto 0) <= X"00";
+	
+	-- pia 2 port a
+	--      bit 0  Up - Player 2 Cocktail
+	--      bit 1  Right - Player 2 Cocktail
+	--      bit 2  Down - Player 2 Cocktail
+	--      bit 3  Left - Player 2 Cocktail
+	--      bit 4  Button 2 - Player 2 Cocktail
+	--      bit 5  Unknown 
+	--      bit 6  Unknown
+	--      bit 7  Button 1 - Player 2 Cocktail
+	pia_2_pa_i(0) <= '0'; -- btn_X;
+	pia_2_pa_i(1) <= '0'; -- btn_X;
+	pia_2_pa_i(2) <= '0'; -- btn_X;
+	pia_2_pa_i(3) <= '0'; -- btn_X;
+	pia_2_pa_i(4) <= '0'; -- btn_X;
+	pia_2_pa_i(5) <= '0'; -- btn_X;
+	pia_2_pa_i(6) <= '0'; -- btn_X;
+	pia_2_pa_i(7) <= '0'; -- btn_X;
+	
+	-- pia 2 port b
+	--      bit 7..0 Unknown
+	pia_2_pb_i(7 downto 0) <= X"00";	
 	
 	----------------------------------------------------------------------------------------------------------
 	-- CRTC i/o control
