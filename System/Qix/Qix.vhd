@@ -288,7 +288,43 @@ end component mc6809;
 	signal pia_2_do      : std_logic_vector( 7 downto 0);
 	signal pia_2_pa_i    : std_logic_vector( 7 downto 0);
 	signal pia_2_pb_i    : std_logic_vector( 7 downto 0);
-	signal pia_2_cb2_o   : std_logic;
+	signal pia_2_cb2_o   : std_logic;	
+
+	--    PIA 3 = U20: (mapped to $9000 on the data CPU)
+	--        port A = data CPU to sound CPU communication
+	--        port B = stereo volume control, 2 4-bit values
+	--        CA1 = interrupt signal from sound CPU
+	--        CA2 = interrupt signal to sound CPU
+	--        CB1 = VS input signal (vertical sync)
+	--        CB2 = INV output signal (cocktail flip)
+	--        IRQA = /DINT1 signal
+	--        IRQB = /DINT1 signal
+	signal pia_3_cs      : std_logic;
+	signal pia_3_rw_n    : std_logic;
+	signal pia_3_do      : std_logic_vector( 7 downto 0);
+	signal pia_3_pa_o    : std_logic_vector( 7 downto 0);
+	signal pia_3_pb_o    : std_logic_vector( 7 downto 0);
+	signal pia_3_ca1_i   : std_logic;
+	signal pia_3_cb2_i   : std_logic;
+	signal pia_3_cb2_o   : std_logic;
+	signal pia_3_irqa    : std_logic;
+	signal pia_3_irqb    : std_logic;
+	
+	--    PIA 4 = U8: (mapped to $4000 on the sound CPU)
+	--        port A = sound CPU to data CPU communication
+	--        port B = DAC value (port B)
+	--        CA1 = interrupt signal from data CPU
+	--        CA2 = interrupt signal to data CPU
+	--        IRQA = /SINT1 signal
+	--        IRQB = /SINT1 signal
+	signal pia_spu_clock : std_logic;
+	signal pia_4_cs      : std_logic;
+	signal pia_4_rw_n    : std_logic;
+	signal pia_4_do      : std_logic_vector( 7 downto 0);
+	signal pia_4_pa_o    : std_logic_vector( 7 downto 0);
+	signal pia_4_ca1_i   : std_logic;
+	signal pia_4_irqa    : std_logic;
+	signal pia_4_irqb    : std_logic;
 	
 	-- PROM buses
 	type   prom_buses_array is array (0 to 27) of std_logic_vector(7 downto 0);
@@ -342,6 +378,7 @@ begin
 	vpu_clock <= Clk_E_vpu;
 	spu_clock <= i_Clk_0921K;
 	pia_dpu_clock <= not dpu_clock;
+	pia_spu_clock <= not spu_clock;
 	dual_clock_w <= vpu_clock when vpu_we = '1' else dpu_clock;
 	dual_clock_r <= dpu_clock when vpu_we = '1' else vpu_clock;
 	dual_wram_addr_a   <= vpu_addr(9 downto 0) when vpu_we = '1' else dpu_addr(9 downto 0);
@@ -395,8 +432,9 @@ begin
 					'1' when dpu_addr = nFirqAck and dpu_we = '1';
 	vpu_firq <= '0' when dpu_addr = nFirq and dpu_we = '1' else
 					'1' when vpu_addr = nFirqAck and vpu_we = '1';
-	dpu_irq  <= '1';
-	vpu_irq  <= '1';
+	vpu_irq  <= '0';
+	dpu_irq  <= pia_3_irqa and pia_3_irqb; -- data cpu irq handled by sound pia
+	spu_irq  <= pia_4_irqa and pia_4_irqb; -- sound cpu irq handled by sound pia
 	
 	-- Data Processor : MC6809 1.25MHz
 	dpu_we <= not dpu_oe;
@@ -411,7 +449,7 @@ begin
 		Q        => Clk_Q_dpu,   -- output clock Q
 		BS       => dpu_bs,      -- bus status
 		BA       => dpu_ba,      -- bus available
-		nIRQ     => dpu_irq,     -- interrupt request
+		nIRQ     => not dpu_irq, -- interrupt request
 		nFIRQ    => dpu_firq,    -- fast interrupt request
 		nNMI     => '1',         -- non-maskable interrupt
 		EXTAL    => Clk_5M,      -- input oscillator
@@ -436,7 +474,7 @@ begin
 		Q        => Clk_Q_vpu,   -- output clock Q
 		BS       => vpu_bs,      -- bus status
 		BA       => vpu_ba,      -- bus available
-		nIRQ     => vpu_irq,     -- interrupt request
+		nIRQ     => not vpu_irq, -- interrupt request
 		nFIRQ    => vpu_firq,    -- fast interrupt request
 		nNMI     => '1',         -- non-maskable interrupt
 		EXTAL    => not Clk_5M,  -- input oscillator
@@ -594,6 +632,21 @@ begin
 		cb2_oe      => open
 	);	
 	
+	-- SOUND PIA U20 (PIA 3)
+	--
+	-- Both ports of PIA U20 have been dedicated to the control of the 
+	-- Sound Processor. Port A is used to select a sound number, which 
+	-- is initiated by strobbing the U20 (CA2) - U8 (CA1) interrupt line. 
+	-- Responses can be made using the reverse U8 (CA2) - U20 (CA1) 
+	-- interrupt. Port B is used to control the amplitude of the generated 
+	-- sound to the Stereo Amplifiers. The output of side B go to U24 and 
+	-- U28, which vary the ratio of the voltage divider across the non- 
+	-- inverting inputs of U29 and LI30. This allows balance control of the 
+	-- sound to coincide with real time events occuring on the screen.
+	--
+	-- DINT is connected to the data CPU's IRQ line
+	-- SINT is connected to the sound CPU's IRQ line
+	
 	--    PIA 3 = U20: (mapped to $9000 on the data CPU)
 	--        port A = data CPU to sound CPU communication
 	--        port B = stereo volume control, 2 4-bit values
@@ -603,7 +656,40 @@ begin
 	--        CB2 = INV output signal (cocktail flip)
 	--        IRQA = /DINT1 signal
 	--        IRQB = /DINT1 signal
-	--
+	-- // sndpia0
+	-- // PA w : sync_sndpial_porta_w
+	-- // PB w : qix_vol_w
+	-- // CA2 : "sndpial" ca1_w
+	-- // CB2 : qix_flip_screen_w
+	-- // IRQA : qix_pia_dint 
+	-- // IRQB : qix_pia_dint
+	pia_3 : entity work.pia6821
+	port map
+	(	
+		clk       	=> pia_dpu_clock,
+		rst       	=> i_Reset,
+		cs        	=> pia_3_cs,
+		rw        	=> pia_3_rw_n,
+		addr      	=> dpu_addr(1 downto 0),
+		data_in   	=> dpu_do,
+		data_out  	=> pia_3_do,
+		irqa      	=> pia_3_irqa,
+		irqb      	=> pia_3_irqb,
+		pa_i      	=> X"00",
+		pa_o        => pia_3_pa_o,
+		pa_oe       => open,
+		ca1       	=> pia_3_ca1_i,
+		ca2_i      	=> '0',
+		ca2_o       => pia_4_ca1_i,
+		ca2_oe      => open,
+		pb_i      	=> X"00",
+		pb_o        => pia_3_pb_o,
+		pb_oe       => open,
+		cb1       	=> '0',             -- TODO !! VSYNC ??
+		cb2_i      	=> pia_3_cb2_i,
+		cb2_o       => pia_3_cb2_o,
+		cb2_oe      => open
+	);	
 	
 	--    PIA 4 = U8: (mapped to $4000 on the sound CPU)
 	--        port A = sound CPU to data CPU communication
@@ -612,7 +698,40 @@ begin
 	--        CA2 = interrupt signal to data CPU
 	--        IRQA = /SINT1 signal
 	--        IRQB = /SINT1 signal
-	--
+	--    from MAME source code :
+	--			 sndpia1
+	--			 PA w : "sndpia0" porta_w
+	--			 PB w : qix_dac_w
+	--			 CA2 : "sndpia0" ca1_w
+	--			 IRQA : qix_pia_sint
+	--        IRQB : qix_pia_sint
+	pia_4 : entity work.pia6821
+	port map
+	(	
+		clk       	=> pia_spu_clock,
+		rst       	=> i_Reset,
+		cs        	=> pia_4_cs,
+		rw        	=> pia_4_rw_n,
+		addr      	=> spu_addr(1 downto 0),
+		data_in   	=> spu_do,
+		data_out  	=> pia_4_do,
+		irqa      	=> pia_4_irqa,
+		irqb      	=> pia_4_irqb,
+		pa_i      	=> pia_3_pa_o, -- < synchronize port a with pia 3
+		pa_o        => open,
+		pa_oe       => open,
+		ca1       	=> pia_4_ca1_i,
+		ca2_i      	=> '0',
+		ca2_o       => pia_3_ca1_i,
+		ca2_oe      => open,
+		pb_i      	=> X"00",
+		pb_o        => pia_4_pa_o,
+		pb_oe       => open,
+		cb1       	=> '0',
+		cb2_i      	=> '0',
+		cb2_o       => open,
+		cb2_oe      => open
+	);	
 	
 	--    PIA 5 = U7: (never actually used, mapped to $2000 on the sound CPU)
 	--        port A = unused
@@ -623,21 +742,6 @@ begin
 	--        CB2 = read signal to TMS5220
 	--        IRQA = /SINT2 signal
 	--        IRQB = /SINT2 signal
-
-	-- SOUND PIA U20
-	--
-	-- Both ports of PIA U20 have been dedicated to the control of the 
-	-- Sound Processor. Port A is used to select a sound number, which 
-	-- is initiated by strobbing the U20 (CA2) - US (CA1) interrupt line. 
-	-- Responses can be made using the reverse U8 (CA2) - U20 (CA1) 
-	-- interrupt. Port B is used to control the amplitude of the generated 
-	-- sound to the Stereo Amplifiers. The output of side B go to U24 and 
-	-- U28, which vary the ratio of the voltage divider across the non- 
-	-- inverting inputs of U29 and LI30. This allows balance control of the 
-	-- sound to coincide with real time events occuring on the screen.
-	--
-	-- DINT is connected to the data CPU's IRQ line
-	-- SINT is connected to the sound CPU's IRQ line
 	
 	----------------------------------------------------------------------------------------------------------
 	-- Memory Mapping
@@ -814,6 +918,7 @@ begin
 		pia_0_do when dpu_addr(15 downto 10) = "100101" else 
 		pia_1_do when dpu_addr(15 downto 10) = "100110" and dpu_addr(8) = '1' else
 		pia_2_do  when dpu_addr(15 downto 10) = "100111" else
+		pia_2_do  when dpu_addr(15 downto 10) = "100100" else
 		X"FF" when (dpu_addr = X"8C00" or dpu_addr = X"8C01") and dpu_we = '0' else
 		prom_buses(19) when dpu_addr(15 downto 8) >= X"F8" else
 		prom_buses(18) when dpu_addr(15 downto 8) >= X"F0" else
@@ -881,10 +986,12 @@ begin
 	pia_0_cs <= '1' when dpu_addr(15 downto 10) = "100101" else '0';                       -- DPU Addr : 100101--------xx : PIA 0
 	pia_1_cs <= '1' when dpu_addr(15 downto 10) = "100110" and dpu_addr(8) = '1' else '0'; -- DPU Addr : 100110-1------xx : PIA 1
 	pia_2_cs <= '1' when dpu_addr(15 downto 10) = "100111" else '0';                       -- DPU Addr : 100111--------xx : PIA 2
-	
+	pia_3_cs <= '1' when dpu_addr(15 downto 10) = "100100" else '0';                       -- DPU Addr : 100100--------xx : PIA 3
+
 	pia_0_rw_n <= '0' when dpu_we = '1' and dpu_addr(15 downto 10) = "100101" else '1';                       -- DPU Addr : 100101--------xx : PIA 0
 	pia_1_rw_n <= '0' when dpu_we = '1' and dpu_addr(15 downto 10) = "100110" and dpu_addr(8) = '1' else '1'; -- DPU Addr : 100110-1------xx : PIA 1
 	pia_2_rw_n <= '0' when dpu_we = '1' and dpu_addr(15 downto 10) = "100111" else '1';                       -- DPU Addr : 100111--------xx : PIA 2
+	pia_3_rw_n <= '0' when dpu_we = '1' and dpu_addr(15 downto 10) = "100100" else '1';                       -- DPU Addr : 100100--------xx : PIA 3
 	
 	-- pia 0 port a
 	--      bit 0  Up
@@ -936,7 +1043,22 @@ begin
 	
 	-- pia 2 port b
 	--      bit 7..0 Unknown
-	pia_2_pb_i(7 downto 0) <= X"00";	
+	pia_2_pb_i(7 downto 0) <= X"00";
+	
+	
+	-- pia 3
+	--        port A = data CPU to sound CPU communication
+	--        port B = stereo volume control, 2 4-bit values
+	--        CA1 = interrupt signal from sound CPU
+	--        CA2 = interrupt signal to sound CPU
+	--        CB1 = VS input signal (vertical sync)
+	--        CB2 = INV output signal (cocktail flip)
+	--        IRQA = /DINT1 signal
+	--        IRQB = /DINT1 signal
+
+	-- (VOLUME L/R) <= pia_3_pb_o; -- TODO !!
+	-- VSYNC -- TODO !!
+	-- (COCKTAIL FLIP) <= pia_3_cb2_o; -- TODO !!
 	
 	----------------------------------------------------------------------------------------------------------
 	-- CRTC i/o control
