@@ -191,12 +191,12 @@ end component mc6809;
 	signal vpu_bs, vpu_ba : std_logic;
 	
 	-- Sound Processor
-	signal spu_clock  : std_logic;
-	signal spu_addr   : std_logic_vector(15 downto 0);
-	signal spu_di     : std_logic_vector( 7 downto 0);
-	signal spu_do     : std_logic_vector( 7 downto 0);
-	signal spu_rw     : std_logic;
-	signal spu_irq    : std_logic;
+	signal spu_clock      : std_logic;
+	signal spu_addr       : std_logic_vector(15 downto 0);
+	signal spu_di         : std_logic_vector( 7 downto 0);
+	signal spu_do         : std_logic_vector( 7 downto 0);
+	signal spu_we, spu_rw : std_logic;
+	signal spu_irq        : std_logic;
 	
 	-- Data Processor Memory Signals
 	signal dpu_wram_addr  : std_logic_vector(12 downto 0);
@@ -214,7 +214,7 @@ end component mc6809;
 	signal vpu_rom_addr         : std_logic_vector(10 downto 0);
 		
 	-- Sound Processor Memory Signals
-	signal spu_wram_addr  : std_logic_vector(13 downto 0);
+	signal spu_wram_addr  : std_logic_vector( 6 downto 0);
 	signal spu_wram_we    : std_logic;
 	signal spu_wram_do    : std_logic_vector( 7 downto 0);
 	signal spu_rom_addr   : std_logic_vector(10 downto 0);
@@ -487,6 +487,7 @@ begin
 	);
 	
 	-- Sound Processor : MC6802
+	spu_we <= not spu_rw;
 	Sound_Processor : entity work.cpu68
 	port map(	
 		clk      => spu_clock,-- E clock input (falling edge)
@@ -864,20 +865,20 @@ begin
 	-- Address          Dir Data     Name        Description
 	-- ---------------- --- -------- ----------- -----------------------
 	-- $0000 - 000000000xxxxxxx R/W xxxxxxxx             6802 internal RAM
-	-- $0000 - 0-1-----------xx R/W xxxxxxxx U7          6821 PIA (TMS5200 control) - Not used by any game
-	-- $0000 - 01------------xx R/W xxxxxxxx U8          6821 PIA (DAC, communication with data CPU)
-	-- $0000 - 1100------------                          n.c.
-	-- $0000 - 1101xxxxxxxxxxxx R   xxxxxxxx U25         program ROM
-	-- $0000 - 1110xxxxxxxxxxxx R   xxxxxxxx U26         program ROM
-	-- $0000 - 1111xxxxxxxxxxxx R   xxxxxxxx U27         program ROM - Qix
+	-- $2000 - 0-1-----------xx R/W xxxxxxxx U7          6821 PIA (TMS5200 control) - Not used by any game
+	-- $4000 - 01------------xx R/W xxxxxxxx U8          6821 PIA (DAC, communication with data CPU)
+	-- $C000 - 1100------------                          n.c.
+	-- $D000 - 1101xxxxxxxxxxxx R   xxxxxxxx U25         program ROM
+	-- $E000 - 1110xxxxxxxxxxxx R   xxxxxxxx U26         program ROM
+	-- $F000 - 1111xxxxxxxxxxxx R   xxxxxxxx U27         program ROM - Qix
 	
 	-- $0000 - $007F : 6802 internal RAM
-	SPU_RAM : work.dpram generic map (8, 8)
+	SPU_RAM : work.dpram generic map (7, 8)
 	port map
 	(
 		clock_a   => spu_clock,
 		wren_a    => spu_wram_we,
-		address_a => spu_wram_addr(7 downto 0),
+		address_a => spu_wram_addr(6 downto 0),
 		data_a    => spu_do,
 		q_a       => spu_wram_do,
 		
@@ -978,6 +979,19 @@ begin
 	----------------------------------------------------------------------------------------------------------
 	-- Sound Processor i/o control
 	----------------------------------------------------------------------------------------------------------
+		
+	-- mux cpu in data between roms/io/wram
+	spu_di <=
+		pia_4_do when spu_addr(15 downto 14) = "01" else 
+		prom_buses(27) when spu_addr(15 downto 12) = "1111" else
+		prom_buses(26) when spu_addr(15 downto 12) = "1110" else -- not used by Qix
+		prom_buses(25) when spu_addr(15 downto 12) = "1101" else -- not used by Qix	
+		spu_wram_do    when spu_addr(15 downto 7) = "000000000" else X"00";
+		
+	-- assign cpu in/out data addresses
+	spu_rom_addr  <= spu_addr(10 downto 0) when spu_addr(15 downto 12) >= X"A" else "000" & X"00";
+	spu_wram_addr <= spu_addr( 6 downto 0) when spu_addr(15 downto 7) = "000000000" else "0000000";
+	spu_wram_we   <= spu_we                when spu_addr(15 downto 7) = "000000000" else '0';
 	
 	----------------------------------------------------------------------------------------------------------
 	-- PIAs i/o control
