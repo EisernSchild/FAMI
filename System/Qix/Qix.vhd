@@ -340,8 +340,10 @@ end component mc6809;
 	type debug_array_1 is array (7 downto 0) of std_logic;
 	signal debug_dpu : debug_array;
 	signal debug_vpu : debug_array;
+	signal debug_spu : debug_array;
 	signal debug_dpu_we : debug_array_1;
 	signal debug_vpu_we : debug_array_1;
+	signal debug_spu_we : debug_array_1;
 		
 begin
 
@@ -1088,9 +1090,10 @@ begin
 		variable video_h_counter : std_logic_vector(7 downto 0) := X"00";
 		variable d_addr_vpu : std_logic_vector(15 downto 0) := X"0000";
 		variable d_addr_dpu : std_logic_vector(15 downto 0) := X"0000";
+		variable d_addr_spu : std_logic_vector(15 downto 0) := X"0000";
 		variable rgb : std_logic_vector(2 downto 0) := "000";
 		variable rgb_dpu : std_logic_vector(2 downto 0) := "000";
-		
+		variable rgb_spu : std_logic_vector(2 downto 0) := "000";
 	begin
 		if rising_edge(i_Clk_20M) then
 			-- get crtc video address
@@ -1118,17 +1121,28 @@ begin
 --						if (d_addr_dpu >= X"9900") and (d_addr_dpu < X"A000") then rgb_dpu := "101"; end if; --- PIA 3 4 : PINK
 --						if (d_addr_dpu >= X"A000") then rgb_dpu := "111"; end if;								    --- ROMS : GREY
 --						
+--						d_addr_spu := debug_spu(to_integer(unsigned(video_h_counter)));	
+--						
+--						if (d_addr_spu < X"2000") then rgb_spu := "100"; end if;                             --- INTERNAL     : RED
+--						if (d_addr_spu >= X"2000") and (d_addr_spu < X"4000") then rgb_spu := "010"; end if; --- TMS5200      : GREEN
+--						if (d_addr_spu >= X"4000") and (d_addr_spu < X"C000") then rgb_spu := "001"; end if; --- PIA U8       : BLUE
+--						if (d_addr_spu >= X"C000") and (d_addr_spu < X"F000") then rgb_spu := "101"; end if; --- ROMS U25 U26 : PINK
+--						if (d_addr_spu >= X"F000") then rgb_spu := "111"; end if;								    --- ROM U27      : GREY
+--						
 --						if RA = "100" then o_VGA_R4 <= rgb(2) & "000";  
 --						elsif RA = "101" then o_VGA_R4 <= debug_vpu_we(to_integer(unsigned(video_h_counter))) & "000"; 
---						elsif RA = "110" then o_VGA_R4 <= debug_dpu_we(to_integer(unsigned(video_h_counter))) & "000"; else
+--						elsif RA = "110" then o_VGA_R4 <= debug_dpu_we(to_integer(unsigned(video_h_counter))) & "000"; 
+--						elsif RA = "111" then o_VGA_R4 <= rgb_spu(2) & "000"; else
 --							o_VGA_R4 <= rgb_dpu(2) & "000"; end if;
 --						if RA = "100" then o_VGA_G4 <= rgb(1) & "000";
 --						elsif RA = "101" then o_VGA_G4 <= debug_vpu_we(to_integer(unsigned(video_h_counter))) & "000";  
---						elsif RA = "110" then o_VGA_G4 <= debug_dpu_we(to_integer(unsigned(video_h_counter))) & "000"; else
+--						elsif RA = "110" then o_VGA_G4 <= debug_dpu_we(to_integer(unsigned(video_h_counter))) & "000"; 
+--						elsif RA = "111" then o_VGA_G4 <= rgb_spu(1) & "000"; else
 --							o_VGA_G4 <= rgb_dpu(1) & "000"; end if;
 --						if RA = "100" then o_VGA_B4 <= rgb(0) & "000";
 --						elsif RA = "101" then o_VGA_B4 <= debug_vpu_we(to_integer(unsigned(video_h_counter))) & "000"; 
---						elsif RA = "110" then o_VGA_B4 <= debug_dpu_we(to_integer(unsigned(video_h_counter))) & "000"; else
+--						elsif RA = "110" then o_VGA_B4 <= debug_dpu_we(to_integer(unsigned(video_h_counter))) & "000"; 
+--						elsif RA = "111" then o_VGA_B4 <= rgb_spu(0) & "000"; else
 --							o_VGA_B4 <= rgb_dpu(0) & "000"; end if;
 		end if;
 	end process;
@@ -1158,6 +1172,18 @@ begin
 --				debug_vpu(to_integer(unsigned(counter))) <= vpu_addr;
 --				debug_vpu_we(to_integer(unsigned(counter))) <= vpu_we;
 --			end if;
+--			end if;
+--		end process;
+--		
+--		process(spu_clock)
+--			variable counter : std_logic_vector(7 downto 0) := X"00";
+--		begin
+--			if rising_edge(spu_clock) then
+--				-- if counter < X"FF" then 			
+--				counter := counter + X"01"; 
+--				-- end if;			
+--				debug_spu(to_integer(unsigned(counter))) <= spu_addr;
+--				debug_spu_we(to_integer(unsigned(counter))) <= spu_we;
 --			end if;
 --		end process;
 		
