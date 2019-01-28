@@ -302,7 +302,7 @@ end component mc6809;
 	signal pia_3_cs      : std_logic;
 	signal pia_3_rw_n    : std_logic;
 	signal pia_3_do      : std_logic_vector( 7 downto 0);
-	signal pia_3_pa_o    : std_logic_vector( 7 downto 0);
+	signal pia_3_pa_i    : std_logic_vector( 7 downto 0);
 	signal pia_3_pb_o    : std_logic_vector( 7 downto 0);
 	signal pia_3_ca1_i   : std_logic;
 	signal pia_3_cb2_i   : std_logic;
@@ -461,7 +461,7 @@ begin
 		nRESET   => not i_Reset, -- not reset
 		MRDY     => '1',         -- strech E and Q
 		nDMABREQ => '1',         -- suspend execution
-		RegData  => open         -- register data (debug)
+		RegData  => RegData_vpu --- open         -- register data (debug)
 	);
 
 	-- Video Processor : MC6809 1.25MHz
@@ -486,7 +486,7 @@ begin
 		nRESET   => not i_Reset, -- not reset
 		MRDY     => '1',         -- strech E and Q
 		nDMABREQ => '1',         -- suspend execution
-		RegData  => open         -- register data (debug)
+		RegData  =>  open         -- register data (debug)
 	);
 	
 	-- Sound Processor : MC6802
@@ -679,8 +679,8 @@ begin
 		data_out  	=> pia_3_do,
 		irqa      	=> pia_3_irqa,
 		irqb      	=> pia_3_irqb,
-		pa_i      	=> X"00",
-		pa_o        => pia_3_pa_o,
+		pa_i      	=> pia_3_pa_i,
+		pa_o        => open,
 		pa_oe       => open,
 		ca1       	=> pia_3_ca1_i,
 		ca2_i      	=> '0',
@@ -721,8 +721,8 @@ begin
 		data_out  	=> pia_4_do,
 		irqa      	=> pia_4_irqa,
 		irqb      	=> pia_4_irqb,
-		pa_i      	=> pia_3_pa_o, -- < synchronize port a with pia 3
-		pa_o        => open,
+		pa_i      	=> X"00", -- < synchronize port a with pia 3
+		pa_o        => pia_3_pa_i,
 		pa_oe       => open,
 		ca1       	=> pia_4_ca1_i,
 		ca2_i      	=> '0',
@@ -1107,9 +1107,10 @@ begin
 			----- DEBUG OPTIONS :
 			
 --			d_addr_vpu := debug_vpu(to_integer(unsigned(video_h_counter)));
---			if (d_addr_vpu >= X"F99B") and (d_addr_vpu <= X"F9D0") then o_VGA_R4 <= "1000"; else o_VGA_R4 <= "0001"; end if;
---			if (d_addr_vpu >= X"F9D0") and (d_addr_vpu <= X"FA00") then o_VGA_G4 <= "1000"; else o_VGA_G4 <= "0000"; end if;
---			if (d_addr_vpu >= X"FA00") and (d_addr_vpu <= X"FA08") then o_VGA_B4 <= "1000"; else o_VGA_B4 <= "0000"; end if;
+--			if (d_addr_vpu >= X"C000") and (d_addr_vpu <= X"C0FF") then o_VGA_R4 <= "1000"; o_VGA_G4 <= "0000"; o_VGA_B4 <= "0000"; 
+--			elsif (d_addr_vpu >= X"fcc4") and (d_addr_vpu <= X"fcd5") then o_VGA_R4 <= "0000"; o_VGA_G4 <= "1000"; o_VGA_B4 <= "0000";
+--			elsif (d_addr_vpu >= X"fcd5") and (d_addr_vpu <= X"fe08") then o_VGA_R4 <= "0000"; o_VGA_G4 <= "0000"; o_VGA_B4 <= "1000";
+--			else o_VGA_R4 <= "0001"; o_VGA_G4 <= "0000"; o_VGA_B4 <= "0000"; end if;
 			
 		end if;
 	end process;
@@ -1118,7 +1119,11 @@ begin
 --			variable counter : std_logic_vector(7 downto 0) := X"00";
 --		begin
 --			if rising_edge(vpu_clock) then 
---				if (counter < X"FF") and (RegData_vpu(111 downto 96) >= X"F99B") and (RegData_vpu(111 downto 96) <= X"FA08") then
+--				if (RegData_vpu(111 downto 96) >= X"C000") and (RegData_vpu(111 downto 96) <= X"C0FF") then
+--					counter := counter + X"01"; 		
+--					debug_vpu(to_integer(unsigned(counter))) <= RegData_vpu(111 downto 96);
+--				end if;
+--				if (RegData_vpu(111 downto 96) >= X"fcc4") and (RegData_vpu(111 downto 96) <= X"fe08") then
 --					counter := counter + X"01"; 		
 --					debug_vpu(to_integer(unsigned(counter))) <= RegData_vpu(111 downto 96);
 --				end if;
