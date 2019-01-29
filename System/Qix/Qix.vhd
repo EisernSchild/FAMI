@@ -436,8 +436,8 @@ begin
 	vpu_firq <= '0' when dpu_addr = nFirq and dpu_we = '1' else
 					'1' when vpu_addr = nFirqAck and vpu_we = '1' ;
 	vpu_irq  <= '0';
-	dpu_irq  <= pia_3_irqa and pia_3_irqb; -- data cpu irq handled by sound pia
-	spu_irq  <= pia_4_irqa and pia_4_irqb; -- sound cpu irq handled by sound pia
+	dpu_irq  <= pia_3_irqa or pia_3_irqb; -- data cpu irq handled by sound pia
+	spu_irq  <= pia_4_irqa or pia_4_irqb; -- sound cpu irq handled by sound pia
 	
 	-- Data Processor : MC6809 1.25MHz
 	dpu_we <= not dpu_oe;
