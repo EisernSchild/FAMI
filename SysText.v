@@ -26,6 +26,7 @@ module Analyzer
 	input clk,
 	input [11:0] i_h,
 	input [11:0] i_v,
+	input [63:0] i_debug,
 
 	output reg o_ce_pixel,
 
@@ -37,6 +38,8 @@ module Analyzer
 reg [2:0] col;
 reg [3:0] row;
 reg [7:0] ascii;
+reg [63:0] number;
+reg line;
 
 wire pix;
 wire [5:0] pixcolor = 6'b111100;
@@ -54,11 +57,13 @@ AnalyzerFont font
 
 always @(posedge clk) begin
 
-	col <= i_v[2:0];
+	col <= (i_v[2:0]) - 1;
 	row <= i_h[3:0];
-	ascii <= 8'h41;
+	number <= (i_debug >> ((i_v >> 3) << 2));
+	ascii <= 8'h30 + {4'h0, number[3:0]};
+	line <= i_v[7:0] == 8'h00 ? 1 : 0;
 
-	{o_r,o_g,o_b} <= pix ? pixcolor : 6'b000001;
+	{o_r,o_g,o_b} <= pix ? pixcolor : line ? 6'b111111 : 6'b000001;
 	o_ce_pixel <= pix;
 
 end

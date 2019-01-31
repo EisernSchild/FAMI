@@ -45,7 +45,8 @@
 //
 // --------------------------------------------------------------------
 
-// define to use MiSTer video mixer
+// define to use MiSTer video mixer (and debug output)
+`define DEBUG_OUTPUT
 `define VIDEO_MIXER
 `ifdef VIDEO_MIXER
 reg  HBlank, VBlank, HSync, VSync;
@@ -59,6 +60,10 @@ module video
   input 			[3:0]		VGA_R4,
   input			[3:0]		VGA_G4,
   input			[3:0]		VGA_B4,
+  
+//`ifdef DEBUG_OUTPUT
+//  input			[63:0]   DEBUG_OUT,
+//`endif
   
   output reg            CE_PIXEL, 
   output	reg				VGA_HS,             
@@ -302,6 +307,47 @@ begin
 	end
 end
 
+`ifdef DEBUG_OUTPUT
+reg	[1:0]	FR, FG, FB;
+Analyzer Analyzer
+(
+	.clk(clk),
+	.i_h(v_count),
+	.i_v(h_count),
+	.i_debug(64'h1234234577776666),
+
+	.o_r(FR),
+	.o_g(FG),
+	.o_b(FB)
+);
+
+reg	[7:0]	DR, DG, DB;
+assign DR = {FR,VGA_R4,FR};
+assign DG = {FG,VGA_G4,FG};
+assign DB = {FB,VGA_B4,FB};
+
+
+`ifdef VIDEO_MIXER
+assign HBlank = !h_act;
+assign VBlank = !v_act;
+video_mixer #(.LINE_LENGTH(320), .HALF_DEPTH(0)) video_mixer
+(
+	.*,
+	.clk_sys(clk),
+	.ce_pix(1),
+	.ce_pix_out(CE_PIXEL),
+
+	.scanlines(2'h00),
+	.hq2x(0),
+	.scandoubler(0),
+	.mono(0),
+
+	.R(DR),
+	.G(DG),
+	.B(DB)
+);
+`endif
+`else
 `ifdef VIDEO_MIXER
 assign HBlank = !h_act;
 assign VBlank = !v_act;
@@ -321,6 +367,7 @@ video_mixer #(.LINE_LENGTH(320), .HALF_DEPTH(0)) video_mixer
 	.G({VGA_G4, VGA_G4}),
 	.B({VGA_B4, VGA_B4})
 );
+`endif
 `endif
 
 endmodule
