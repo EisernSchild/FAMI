@@ -300,7 +300,7 @@ begin
    endcase
 end
 
-assign pix_addr = {row, ~col};
+assign pix_addr = {row, col};
 assign pixel = char[pix_addr];
 
 endmodule 
