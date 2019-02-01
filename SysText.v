@@ -62,7 +62,13 @@ always @(posedge clk) begin
 	col <= (h_count[2:0]) + 1;
 	row <= i_h[3:0];
 	number <= (i_debug >> (((h_count - 8) >> 3) << 2));
-	ascii <= 8'h30 + {4'h0, number[3:0]};
+	ascii <= number[3:0] == 4'hA ? 8'h41 :
+				number[3:0] == 4'hB ? 8'h42 :
+				number[3:0] == 4'hC ? 8'h43 :
+				number[3:0] == 4'hD ? 8'h44 :
+				number[3:0] == 4'hE ? 8'h45 :
+				number[3:0] == 4'hF ? 8'h46 :
+				8'h30 + {4'h0, number[3:0]};
 	line <= (h_count[7:0] == 8'h08) | (h_count[7:0] == 8'h48) | (h_count[7:0] == 8'h88) | (h_count[7:0] == 8'hC8)? 1 : 0;
 
 	{o_r,o_g,o_b} <= pix ? pixcolor : line ? 6'b111111 : 6'b000001;

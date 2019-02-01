@@ -314,7 +314,7 @@ Analyzer Analyzer
 	.clk(clk),
 	.i_h(v_count),
 	.i_v(h_count),
-	.i_debug(64'h1234234577776666),
+	.i_debug(64'h1234ABCD7af7EF66),
 
 	.o_r(FR),
 	.o_g(FG),
