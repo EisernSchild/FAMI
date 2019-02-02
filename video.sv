@@ -314,7 +314,15 @@ Analyzer Analyzer
 	.clk(clk),
 	.i_h(v_count),
 	.i_v(h_count),
-	.i_debug(64'h1234ABCD7af7EF66),
+	
+	.i_debug0(64'h1234ABCD7af7EF66),
+	.i_debug1(64'hABCDEF0123456789),
+	.i_debug2(64'h1234678ABCD7af7E),
+	.i_debug3(64'hFF01236B37B69660),
+	.i_debug4(64'hABCDEF0123678789),
+	.i_debug5(64'h1234ABCD7af7EF66),
+	.i_debug6(64'hABCDEF0123456789),
+	.i_debug7(64'h963CBF6B37B69660),
 
 	.o_r(FR),
 	.o_g(FG),
