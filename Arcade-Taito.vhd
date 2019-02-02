@@ -209,7 +209,18 @@ architecture basic of emu is
 		
 		VGA_R4 : in std_logic_vector(3 downto 0);
 		VGA_G4 : in std_logic_vector(3 downto 0);
-		VGA_B4 : in std_logic_vector(3 downto 0); 
+		VGA_B4 : in std_logic_vector(3 downto 0);
+	
+		-- only valid if DEBUG_OUTPUT is defined in video.sv !!!
+		DEBUG_OUT0 : in std_logic_vector(63 downto 0);
+		DEBUG_OUT1 : in std_logic_vector(63 downto 0);
+		DEBUG_OUT2 : in std_logic_vector(63 downto 0);
+		DEBUG_OUT3 : in std_logic_vector(63 downto 0);
+		DEBUG_OUT4 : in std_logic_vector(63 downto 0);
+		DEBUG_OUT5 : in std_logic_vector(63 downto 0);
+		DEBUG_OUT6 : in std_logic_vector(63 downto 0);
+		DEBUG_OUT7 : in std_logic_vector(63 downto 0);
+		-- only valid if DEBUG_OUTPUT is defined in video.sv !!!
 		
 		CE_PIXEL : out std_logic;
 		VGA_HS : out std_logic;
@@ -269,8 +280,12 @@ architecture basic of emu is
 	signal HS_CORE, VS_CORE, Cs_CORE : std_logic;
 	signal HS, VS, DE : std_logic;
 	
-	--audio
+	-- Audio
 	signal AUDIO_L8, AUDIO_R8 : std_logic_vector(7 downto 0);
+	
+	-- debug
+	signal RegData_dpu  : std_logic_vector(111 downto 0);
+	signal RegData_vpu  : std_logic_vector(111 downto 0);
 	
 begin
 -- assigning audio
@@ -373,6 +388,15 @@ begin
 		VGA_G4 => VGA_G4,
 		VGA_B4 => VGA_B4,
 		
+		DEBUG_OUT0 => RegData_dpu(111 downto 48),
+		DEBUG_OUT1 => RegData_dpu(47 downto 0) & X"0000",
+		DEBUG_OUT2 => RegData_vpu(111 downto 48),
+		DEBUG_OUT3 => RegData_vpu(47 downto 0) & X"0000",
+		DEBUG_OUT4 => X"0000000000000000",
+		DEBUG_OUT5 => X"0000000000000000",
+		DEBUG_OUT6 => X"0000000000000000",
+		DEBUG_OUT7 => X"0000000000000000",
+		
 		CE_PIXEL => CE_PIXEL,
 		VGA_HS => HS,
 		VGA_VS => VS,
@@ -390,6 +414,9 @@ begin
 		i_Clk_20M   => Clk_20M,      -- input clock 20 Mhz ... must be same as Video Clock !!
 		i_Clk_0921K => Clk_0921K,    -- input clock 0.9216 MHz -- Sound CPU : M6802 @ 921.6 Khz
 		i_Reset     =>	RESET,        -- reset when 1
+		
+		o_RegData_dpu => RegData_dpu,
+		o_RegData_vpu => RegData_vpu,
 		
 		o_VGA_R4 => VGA_R4, -- Red Color 4Bits
 		o_VGA_G4 => VGA_G4, -- Green Color 4Bits

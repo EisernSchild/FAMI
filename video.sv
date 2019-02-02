@@ -45,8 +45,10 @@
 //
 // --------------------------------------------------------------------
 
-// define to use MiSTer video mixer (and debug output)
+// define to output debug data
 `define DEBUG_OUTPUT
+
+// define to use MiSTer video mixer (and debug output)
 `define VIDEO_MIXER
 `ifdef VIDEO_MIXER
 reg  HBlank, VBlank, HSync, VSync;
@@ -61,9 +63,16 @@ module video
   input			[3:0]		VGA_G4,
   input			[3:0]		VGA_B4,
   
-//`ifdef DEBUG_OUTPUT
-//  input			[63:0]   DEBUG_OUT,
-//`endif
+`ifdef DEBUG_OUTPUT
+  input			[63:0]   DEBUG_OUT0,
+  input			[63:0]   DEBUG_OUT1,
+  input			[63:0]   DEBUG_OUT2,
+  input			[63:0]   DEBUG_OUT3,
+  input			[63:0]   DEBUG_OUT4,
+  input			[63:0]   DEBUG_OUT5,
+  input			[63:0]   DEBUG_OUT6,
+  input			[63:0]   DEBUG_OUT7,
+`endif
   
   output reg            CE_PIXEL, 
   output	reg				VGA_HS,             
@@ -315,14 +324,14 @@ Analyzer Analyzer
 	.i_h(v_count),
 	.i_v(h_count),
 	
-	.i_debug0(64'h1234ABCD7af7EF66),
-	.i_debug1(64'hABCDEF0123456789),
-	.i_debug2(64'h1234678ABCD7af7E),
-	.i_debug3(64'hFF01236B37B69660),
-	.i_debug4(64'hABCDEF0123678789),
-	.i_debug5(64'h1234ABCD7af7EF66),
-	.i_debug6(64'hABCDEF0123456789),
-	.i_debug7(64'h963CBF6B37B69660),
+	.i_debug0(DEBUG_OUT0),
+	.i_debug1(DEBUG_OUT1),
+	.i_debug2(DEBUG_OUT2),
+	.i_debug3(DEBUG_OUT3),
+	.i_debug4(DEBUG_OUT4),
+	.i_debug5(DEBUG_OUT5),
+	.i_debug6(DEBUG_OUT6),
+	.i_debug7(DEBUG_OUT7),
 
 	.o_r(FR),
 	.o_g(FG),

@@ -47,6 +47,10 @@ port
 	i_Clk_0921K : in std_logic; -- input clock 0.9216 MHz -- Sound CPU : M6802 @ 921.6 Khz
 	i_Reset     : in std_logic; -- reset when 1
 	
+	-- debug output -- to be deleted !!!
+	o_RegData_dpu  : out std_logic_vector(111 downto 0);
+	o_RegData_vpu  : out std_logic_vector(111 downto 0);
+	
 	o_VGA_R4 : out std_logic_vector(3 downto 0); -- Red Color 4Bits
 	o_VGA_G4 : out std_logic_vector(3 downto 0); -- Green Color 4Bits
 	o_VGA_B4 : out std_logic_vector(3 downto 0)  -- Blue Color 4Bits
@@ -334,17 +338,6 @@ end component mc6809;
 	type leds_array is array (0 to 5) of std_logic;
 	signal leds : leds_array;
 	signal color_ram_page : std_logic_vector(1 downto 0);
-	
-	-- debug
-	type debug_array is array (7 downto 0) of std_logic_vector(15 downto 0);
-	type debug_array_1 is array (7 downto 0) of std_logic;
-	signal debug_dpu : debug_array;
-	signal debug_vpu : debug_array;
-	signal debug_spu : debug_array;
-	signal debug_dpu_we : debug_array_1;
-	signal debug_vpu_we : debug_array_1;
-	signal debug_spu_we : debug_array_1;
-	signal RegData_vpu  : std_logic_vector(111 downto 0);
 		
 begin
 
@@ -461,7 +454,7 @@ begin
 		nRESET   => not i_Reset, -- not reset
 		MRDY     => '1',         -- strech E and Q
 		nDMABREQ => '1',         -- suspend execution
-		RegData  => RegData_vpu --- open         -- register data (debug)
+		RegData  => o_RegData_dpu --- open         -- register data (debug)
 	);
 
 	-- Video Processor : MC6809 1.25MHz
@@ -486,7 +479,7 @@ begin
 		nRESET   => not i_Reset, -- not reset
 		MRDY     => '1',         -- strech E and Q
 		nDMABREQ => '1',         -- suspend execution
-		RegData  =>  open         -- register data (debug)
+		RegData  =>  o_RegData_vpu  -- open       -- register data (debug)
 	);
 	
 	-- Sound Processor : MC6802
@@ -1103,33 +1096,9 @@ begin
 			-- else video_h_counter := X"00"; end if;
 			video_addr_crtc <= MA(4 downto 0) & RA(2 downto 0) & video_h_counter(7 downto 0);
 			
-			
-			----- DEBUG OPTIONS :
-			
---			d_addr_vpu := debug_vpu(to_integer(unsigned(video_h_counter)));
---			if (d_addr_vpu >= X"C000") and (d_addr_vpu <= X"C0FF") then o_VGA_R4 <= "1000"; o_VGA_G4 <= "0000"; o_VGA_B4 <= "0000"; 
---			elsif (d_addr_vpu >= X"fcc4") and (d_addr_vpu <= X"fcd5") then o_VGA_R4 <= "0000"; o_VGA_G4 <= "1000"; o_VGA_B4 <= "0000";
---			elsif (d_addr_vpu >= X"fcd5") and (d_addr_vpu <= X"fe08") then o_VGA_R4 <= "0000"; o_VGA_G4 <= "0000"; o_VGA_B4 <= "1000";
---			else o_VGA_R4 <= "0001"; o_VGA_G4 <= "0000"; o_VGA_B4 <= "0000"; end if;
-			
 		end if;
 	end process;
 	
---		process(vpu_clock)
---			variable counter : std_logic_vector(7 downto 0) := X"00";
---		begin
---			if rising_edge(vpu_clock) then 
---				if (RegData_vpu(111 downto 96) >= X"C000") and (RegData_vpu(111 downto 96) <= X"C0FF") then
---					counter := counter + X"01"; 		
---					debug_vpu(to_integer(unsigned(counter))) <= RegData_vpu(111 downto 96);
---				end if;
---				if (RegData_vpu(111 downto 96) >= X"fcc4") and (RegData_vpu(111 downto 96) <= X"fe08") then
---					counter := counter + X"01"; 		
---					debug_vpu(to_integer(unsigned(counter))) <= RegData_vpu(111 downto 96);
---				end if;
---			end if;
---		end process;
-		
 	-- pixel output
 	o_VGA_R4 <= video_pixel(7 downto 4);
 	o_VGA_G4 <= video_pixel(7 downto 4);
