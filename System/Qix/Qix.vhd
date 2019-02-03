@@ -165,9 +165,9 @@ end component mc6809;
 	constant Khz_1250 : std_logic_vector(15 downto 0):= "0111100001111000";
 	
 	signal Clk_10M : std_logic := '0'; -- 10Mhz
-	signal Clk_5M : std_logic; -- 5Mhz
-	signal Clk_2500K : std_logic; -- 2.5Mhz
-	signal Clk_1250K : std_logic; -- 2 x M6809 @ 1.25Mhz (& All but Qix/Qix2 have a M68705 @ 1Mhz as well) 
+	signal Clk_5M : std_logic := '0'; -- 5Mhz
+	signal Clk_2500K : std_logic := '0'; -- 2.5Mhz
+	signal Clk_1250K : std_logic := '0'; -- 2 x M6809 @ 1.25Mhz (& All but Qix/Qix2 have a M68705 @ 1Mhz as well) 
 	signal Clk_Q_vpu, Clk_E_vpu, Clk_Q_dpu, Clk_E_dpu : std_logic;
 	
 	signal Ctr_FRQ : integer range 0 to 15 := 0; -- frequency counter
@@ -378,15 +378,34 @@ begin
 	end process generate_Clks;
 	
 	-- debug halt
-	debug_halt : process(Clk_10M)
+	debug_01 : process(vpu_clock)
 	begin
-		if RegData_vpu(111 downto 96) = X"C800" then
-				Debug_vpu(1) <= '1';
+		if rising_edge(vpu_clock) then
+			case RegData_vpu(111 downto 96) is
+				when X"FA08" => Debug_vpu(0) <= '1';
+				when X"C800" => Debug_vpu(1) <= '1';
+				when X"c887" => Debug_vpu(2) <= '1';
+				when X"c8b1" => Debug_vpu(3) <= '1';
+				when X"c890" => Debug_vpu(4) <= '1';
+				when X"e004" => Debug_vpu(5) <= '1';
+				when others => Debug_vpu(15) <= '1';
+			end case;
 		end if;
-		if RegData_vpu(111 downto 96) = X"FA08" then
-				Debug_vpu(0) <= '1';
-		end if;
-	end process debug_halt;	
+	end process debug_01;	
+	debug_02 : process(dpu_clock)
+	begin
+		if rising_edge(dpu_clock) then
+			case RegData_dpu(111 downto 96) is
+				when X"fd23" => Debug_dpu(0) <= '1';
+				when X"c000" => Debug_dpu(1) <= '1';
+				when X"e84b" => Debug_dpu(2) <= '1';
+				when X"c03b" => Debug_dpu(3) <= '1';
+				when X"c05e" => Debug_dpu(4) <= '1';
+				when X"ce07" => Debug_dpu(5) <= '1';
+				when others => Debug_dpu(15) <= '1';
+			end case;
+		end if;	
+	end process debug_02;	
 	o_RegData_dpu <= RegData_dpu;
 	o_RegData_vpu <= RegData_vpu;
 	o_Debug_dpu <= Debug_dpu;
