@@ -286,6 +286,8 @@ architecture basic of emu is
 	-- debug
 	signal RegData_dpu  : std_logic_vector(111 downto 0);
 	signal RegData_vpu  : std_logic_vector(111 downto 0);
+	signal Debug_dpu : std_logic_vector(15 downto 0);
+	signal Debug_vpu : std_logic_vector(15 downto 0);
 	
 begin
 -- assigning audio
@@ -389,9 +391,9 @@ begin
 		VGA_B4 => VGA_B4,
 		
 		DEBUG_OUT0 => RegData_dpu(111 downto 48),
-		DEBUG_OUT1 => RegData_dpu(47 downto 0) & X"0000",
+		DEBUG_OUT1 => RegData_dpu(47 downto 0) & Debug_dpu,
 		DEBUG_OUT2 => RegData_vpu(111 downto 48),
-		DEBUG_OUT3 => RegData_vpu(47 downto 0) & X"0000",
+		DEBUG_OUT3 => RegData_vpu(47 downto 0) & Debug_vpu,
 		DEBUG_OUT4 => X"0000000000000000",
 		DEBUG_OUT5 => X"0000000000000000",
 		DEBUG_OUT6 => X"0000000000000000",
@@ -417,6 +419,8 @@ begin
 		
 		o_RegData_dpu => RegData_dpu,
 		o_RegData_vpu => RegData_vpu,
+		o_Debug_dpu => Debug_dpu,
+		o_Debug_vpu => Debug_vpu,
 		
 		o_VGA_R4 => VGA_R4, -- Red Color 4Bits
 		o_VGA_G4 => VGA_G4, -- Green Color 4Bits

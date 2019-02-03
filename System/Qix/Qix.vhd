@@ -50,6 +50,8 @@ port
 	-- debug output -- to be deleted !!!
 	o_RegData_dpu  : out std_logic_vector(111 downto 0);
 	o_RegData_vpu  : out std_logic_vector(111 downto 0);
+	o_Debug_dpu : out std_logic_vector(15 downto 0);
+	o_Debug_vpu : out std_logic_vector(15 downto 0);
 	
 	o_VGA_R4 : out std_logic_vector(3 downto 0); -- Red Color 4Bits
 	o_VGA_G4 : out std_logic_vector(3 downto 0); -- Green Color 4Bits
@@ -338,6 +340,12 @@ end component mc6809;
 	type leds_array is array (0 to 5) of std_logic;
 	signal leds : leds_array;
 	signal color_ram_page : std_logic_vector(1 downto 0);
+	
+	-- debug
+	signal RegData_dpu  : std_logic_vector(111 downto 0);
+	signal RegData_vpu  : std_logic_vector(111 downto 0);
+	signal Debug_dpu : std_logic_vector(15 downto 0) := X"0000";
+	signal Debug_vpu : std_logic_vector(15 downto 0) := X"0000";
 		
 begin
 
@@ -368,6 +376,21 @@ begin
 			Clk_1250K <= Khz_1250(Ctr_FRQ);
 		end if;
 	end process generate_Clks;
+	
+	-- debug halt
+	debug_halt : process(Clk_10M)
+	begin
+		if RegData_vpu(111 downto 96) = X"C800" then
+				Debug_vpu(1) <= '1';
+		end if;
+		if RegData_vpu(111 downto 96) = X"FA08" then
+				Debug_vpu(0) <= '1';
+		end if;
+	end process debug_halt;	
+	o_RegData_dpu <= RegData_dpu;
+	o_RegData_vpu <= RegData_vpu;
+	o_Debug_dpu <= Debug_dpu;
+	o_Debug_vpu <= Debug_vpu;
 	
 	-- assign clocks
 	dpu_clock <= Clk_E_dpu;
@@ -454,7 +477,7 @@ begin
 		nRESET   => not i_Reset, -- not reset
 		MRDY     => '1',         -- strech E and Q
 		nDMABREQ => '1',         -- suspend execution
-		RegData  => o_RegData_dpu --- open         -- register data (debug)
+		RegData  => RegData_dpu  -- open         -- register data (debug)
 	);
 
 	-- Video Processor : MC6809 1.25MHz
@@ -479,7 +502,7 @@ begin
 		nRESET   => not i_Reset, -- not reset
 		MRDY     => '1',         -- strech E and Q
 		nDMABREQ => '1',         -- suspend execution
-		RegData  =>  o_RegData_vpu  -- open       -- register data (debug)
+		RegData  => RegData_vpu  -- open       -- register data (debug)
 	);
 	
 	-- Sound Processor : MC6802
