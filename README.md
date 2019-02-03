@@ -30,5 +30,5 @@ https://github.com/MiSTer-devel/Main_MiSTer/wiki
 
 ### Support or Contact
 
-Any Questions ? Or would you like to contribute anything to Taito Arcade Systems FPGA ? 
+Any Questions ? Or would you like to contribute anything to F.A.M.I. ? 
 Don't hesitate to contact me @ eisenschild@gmail.com .
