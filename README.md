@@ -1,8 +1,6 @@
-## Taito Arcade Systems FPGA Configuration
+﻿## FPGA Arcade Machine Instauration
 
-This project aims to reproduce all retro Taito Arcade Systems true to FPGA. It is based on Project MiSTer, which is currently the best Open Source platform for FPGA retro gaming.
-
-Taito has developed many of the very best arcade video games. Best known for Space Invaders (1978), Bubble Bobble (1986), Elevator Action (1983), Arkanoid (1986), Jungle Hunt (1982), other titles include Speed Race (1974), Gun Fight (1975), Qix (1981), Buggy Challenge (1984), Takeshi no Chōsenjō (1986), Chase H.Q. (1988), Puzznic (1989), Kick Master (1992), Gun Buster (1992), Puzzle Bobble (1994) and much more.
+The F.A.M.I. project aims to reproduce all retro Arcade Systems true to FPGA. It is based on Project MiSTer, which is currently the best Open Source platform for FPGA retro gaming.
 
 ### Taito Qix Hardware (1981)
 

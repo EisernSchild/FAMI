@@ -1,0 +1,1 @@
+set_global_assignment -name VHDL_FILE ../../../../M6800/cpu68.vhd

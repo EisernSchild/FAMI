@@ -1,0 +1,3 @@
+set_global_assignment -name VHDL_FILE ../../../../M6845/config.vhd
+set_global_assignment -name VHDL_FILE ../../../../M6845/cursor.vhd
+set_global_assignment -name VHDL_FILE ../../../../M6845/crtc6845.vhd
