@@ -15,7 +15,10 @@
 ------------------------------------------------------------------------------
 
 package FAMI_package is
+
+	-- game rom name, lite build enabled
 	type game_rom_enum is (junofrst, tutankhm);
 	constant LITE_BUILD : boolean := true;
 	constant GAME_ROM : game_rom_enum := tutankhm;
+	
 end package;

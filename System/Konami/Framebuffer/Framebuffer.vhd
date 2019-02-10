@@ -26,7 +26,8 @@ generic
 (	
 	-- generic RAM integer constants
 	constant nGenRamDataWidth      : integer := 8;     -- generic RAM 8 bit data width
-	constant nGenRamAddrWidth		 : integer := 10;    -- generic RAM address width
+	constant nGenRamAddrWidth		 : integer := 12;    -- generic RAM address width
+	constant nGenRamADDrWidthVideo : integer := 15;    -- video RAM address width
 	
 	-- latch address constants
 	constant nLatch             : std_logic_vector(15 downto 0) := X"FFFF" -- TODO !! LATCH ADRESSES
@@ -88,16 +89,22 @@ architecture System of Framebuffer is
 	signal cpu_bs, cpu_ba : std_logic;
 	
 	-- Main CPU Memory Signals
-	signal cpu_wram_addr  : std_logic_vector(12 downto 0);
+	signal cpu_wram_addr  : std_logic_vector(11 downto 0);
 	signal cpu_wram_we    : std_logic;
 	signal cpu_wram_do    : std_logic_vector( 7 downto 0);
-	signal cpu_rom_addr   : std_logic_vector(10 downto 0);	
+	signal cpu_rom_addr   : std_logic_vector(11 downto 0);
 	
-	-- CMOS signals (data-out and write-enabled)
-	signal cmos_do         : std_logic_vector( 7 downto 0);
-	signal cmos_we         : std_logic;
+	-- Video RAM Memory Signals
+	signal video_wram_addr        : std_logic_vector(14 downto 0);
+	signal video_wram_we          : std_logic;
+	signal video_wram_do          : std_logic_vector( 7 downto 0);
+	
+--	-- CMOS signals (data-out and write-enabled)
+--	signal cmos_do         : std_logic_vector( 7 downto 0);
+--	signal cmos_we         : std_logic;
 	
 	-- Video control signals
+	signal video_addr_output    : std_logic_vector(14 downto 0);
 	signal video_pixel		    : std_logic_vector( 7 downto 0);
 	
 	-- PROM buses
@@ -169,54 +176,80 @@ end generate;
 	-- Memory Mapping
 	----------------------------------------------------------------------------------------------------------
 	
-	-- Main CPU
-	
-	
-	
+	-- $0000 - $7FFF : direct video RAM access - Page 0 $0000-$7FFF / Page 1 $8000-$FFFF
+	Video_RAM : work.dpram generic map (nGenRamADDrWidthVideo, nGenRamDataWidth)
+	port map
+	(
+		clock_a   => cpu_clock_e,
+		wren_a    => video_wram_we,
+		address_a => video_wram_addr,
+		data_a    => cpu_do,
+		q_a       => video_wram_do,
 
+		clock_b   => i_Clk,
+		address_b => video_addr_output,
+		q_b       => video_pixel
+	);
 	
-	--	Data Processor ROM Region -> U12-U19 PROM
---	PROM_U12 : entity work.prom_u12 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(12));
---	PROM_U13 : entity work.prom_u13 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(13));
---	PROM_U14 : entity work.prom_u14 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(14));
---	PROM_U15 : entity work.prom_u15 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(15));
---	PROM_U16 : entity work.prom_u16 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(16));
---	PROM_U17 : entity work.prom_u17 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(17));
---	PROM_U18 : entity work.prom_u18 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(18));
---	PROM_U19 : entity work.prom_u19 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(19));
---	
---	--	Video Processor ROM Region -> U4-U10 PROM
---	PROM_U4  : entity work.prom_u4  port map (CLK => vpu_clock, ADDR => vpu_rom_addr, DATA => prom_buses( 4));
---	PROM_U5  : entity work.prom_u5  port map (CLK => vpu_clock, ADDR => vpu_rom_addr, DATA => prom_buses( 5));
---	PROM_U6  : entity work.prom_u6  port map (CLK => vpu_clock, ADDR => vpu_rom_addr, DATA => prom_buses( 6));
---	PROM_U7  : entity work.prom_u7  port map (CLK => vpu_clock, ADDR => vpu_rom_addr, DATA => prom_buses( 7));
---	PROM_U8  : entity work.prom_u8  port map (CLK => vpu_clock, ADDR => vpu_rom_addr, DATA => prom_buses( 8));
---	PROM_U9  : entity work.prom_u9  port map (CLK => vpu_clock, ADDR => vpu_rom_addr, DATA => prom_buses( 9));
---	PROM_U10 : entity work.prom_u10 port map (CLK => vpu_clock, ADDR => vpu_rom_addr, DATA => prom_buses(10));
---	
---	--	Sound Processor ROM Region -> U27 PROM
---	PROM_U27 : entity work.prom_u27 port map (CLK => spu_clock, ADDR => spu_rom_addr, DATA => prom_buses(27));
+	-- $8000 - $8FFF : main cpu ram
+	CPU_RAM : work.dpram generic map (nGenRamAddrWidth, nGenRamDataWidth)
+	port map
+	(
+		clock_a   => cpu_clock_e,
+		wren_a    => cpu_wram_we,
+		address_a => cpu_wram_addr,
+		data_a    => cpu_do,
+		q_a       => cpu_wram_do,
+		
+		clock_b   => '0',
+		address_b => (others => '0'),
+		enable_b  => '0',
+		q_b       => open
+	);
 	
+	--	main cpu roms
+	PROM_1H : entity work.PROM_H1 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(0));   -- $0A000
+	PROM_2H : entity work.PROM_H2 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(1));   -- $0B000
+	PROM_3H : entity work.PROM_H3 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(2));   -- $0C000
+	PROM_4H : entity work.PROM_H4 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(3));   -- $0D000
+	PROM_5H : entity work.PROM_H5 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(4));   -- $0E000
+	PROM_6H : entity work.PROM_H6 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(5));   -- $0F000
+	
+	-- main cpu roms banked
+	PROM_1I : entity work.PROM_J1 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(6));   -- $10000
+	PROM_2I : entity work.PROM_J2 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(7));   -- $11000
+	PROM_3I : entity work.PROM_J3 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(8));   -- $12000
+	PROM_4I : entity work.PROM_J4 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(9));   -- $13000
+	PROM_5I : entity work.PROM_J5 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(10));  -- $14000
+	PROM_6I : entity work.PROM_J6 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(11));  -- $15000
+	PROM_7I : entity work.PROM_J7	port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(12));  -- $16000
+	PROM_8I : entity work.PROM_J8 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(13));  -- $17000
+	PROM_9I : entity work.PROM_J9 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(14));  -- $18000
+	
+	--	
+	-- PROM_7a : entity work.PROM_11_7A port map (CLK => spu_clock, ADDR => spu_rom_addr, DATA => prom_buses(27));
+	-- PROM_8a : entity work.PROM_10_8A port map (CLK => spu_clock, ADDR => spu_rom_addr, DATA => prom_buses(27));
+		
 	----------------------------------------------------------------------------------------------------------
 	-- Main Processor i/o control
 	----------------------------------------------------------------------------------------------------------
 	
 	-- mux cpu in data between roms/io/wram
 	cpu_di <=
-		prom_buses(19) when cpu_addr(15 downto 8) >= X"F8" else
-		prom_buses(18) when cpu_addr(15 downto 8) >= X"F0" else
-		prom_buses(17) when cpu_addr(15 downto 8) >= X"E8" else
-		prom_buses(16) when cpu_addr(15 downto 8) >= X"E0" else
-		prom_buses(15) when cpu_addr(15 downto 8) >= X"D8" else
-		prom_buses(14) when cpu_addr(15 downto 8) >= X"D0" else
-		prom_buses(13) when cpu_addr(15 downto 8) >= X"C8" else
-		prom_buses(12) when cpu_addr(15 downto 8) >= X"C0" else		
-		cpu_wram_do    when cpu_addr(15 downto 8) >= X"84" else X"00";
+		prom_buses(5) when cpu_addr(15 downto 8) >= X"F0" else
+		prom_buses(4) when cpu_addr(15 downto 8) >= X"E0" else
+		prom_buses(3) when cpu_addr(15 downto 8) >= X"D0" else
+		prom_buses(2) when cpu_addr(15 downto 8) >= X"C0" else
+		prom_buses(1) when cpu_addr(15 downto 8) >= X"B0" else
+		prom_buses(0) when cpu_addr(15 downto 8) >= X"A0" else
+		cpu_wram_do   when cpu_addr(15 downto 8) >= X"80" else video_wram_do;
 		
-	-- assign cpu in/out data addresses
-	cpu_rom_addr  <= (others => '0'); -- cpu_addr(10 downto 0) when cpu_addr(15 downto 12) >= X"A" else "000" & X"00";
-	cpu_wram_addr <= (others => '0');-- cpu_addr(12 downto 0) when ((cpu_addr(15 downto 12) >= X"8") and (cpu_addr(15 downto 12) < X"A")) else '0' & X"000";
-	cpu_wram_we   <= '0'; -- cpu_we                when ((cpu_addr(15 downto 12) >= X"8") and (cpu_addr(15 downto 12) < X"A")) else '0';
+	-- assign cpu in/out data addresses	
+	cpu_rom_addr  <= cpu_addr(11 downto 0) when cpu_addr(15 downto 12) >= X"A" else X"000";
+	cpu_wram_addr <= cpu_addr(11 downto 0) when ((cpu_addr(15 downto 12) >= X"8") and (cpu_addr(15 downto 12) < X"9")) else X"000";
+	cpu_wram_we   <= cpu_we when ((cpu_addr(15 downto 12) >= X"8") and (cpu_addr(15 downto 12) < X"9")) else '0';
+	video_wram_addr <= cpu_addr(14 downto 0) when (cpu_addr(15 downto 12) < X"8") else "000" & X"000";
+	video_wram_we <= cpu_we when (cpu_addr(15 downto 12) < X"8") else '0';
 	
 	-- pixel output
 	o_VGA_R4 <= video_pixel(7 downto 4);
