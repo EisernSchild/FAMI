@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 --
---  Arcade: Taito - Taito Arcade Systems FPGA Configuration for Project MiSTer
+--  FAMI - FPGA Arcade Machine Instauration
 --  
 --  Copyright (C) 2018 Denis Reischl
 -- 
@@ -9,7 +9,7 @@
 --  Taito Qix Arcade System Configuration
 --  File <Qix.vhd> (c) 2018 by Denis Reischl
 --
---  EisernSchild/Arcade-Taito is licensed under the
+--  EisernSchild/FAMI is licensed under the
 --  GNU General Public License v3.0
 --
 ------------------------------------------------------------------------------

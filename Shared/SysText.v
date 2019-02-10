@@ -1,12 +1,12 @@
 //------------------------------------------------------------------------------
 //--
-//--  Arcade: Taito - Taito Arcade Systems FPGA Configuration for Project MiSTer
+//--  FAMI - FPGA Arcade Machine Instauration
 //--  
 //--  Copyright (C) 2018 Denis Reischl
 //-- 
 //--  Project MiSTer and related files (C) 2017,2018 Sorgelig 
 //--
-//--  EisernSchild/Arcade-Taito is licensed under the
+//--  EisernSchild/FAMI is licensed under the
 //--  GNU General Public License v3.0
 //--
 //------------------------------------------------------------------------------

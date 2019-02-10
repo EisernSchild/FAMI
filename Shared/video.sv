@@ -1,12 +1,12 @@
 //------------------------------------------------------------------------------
 //--
-//--  Arcade: Taito - Taito Arcade Systems FPGA Configuration for Project MiSTer
+//--  FAMI - FPGA Arcade Machine Instauration
 //--  
 //--  Copyright (C) 2018 Denis Reischl
 //-- 
 //--  Project MiSTer and related files (C) 2017,2018 Sorgelig 
 //--
-//--  EisernSchild/Arcade-Taito is licensed under the
+//--  EisernSchild/FAMI is licensed under the
 //--  GNU General Public License v3.0
 //--
 //------------------------------------------------------------------------------
@@ -45,9 +45,6 @@
 //
 // --------------------------------------------------------------------
 
-// define to output debug data
-`define DEBUG_OUTPUT
-
 // define to use MiSTer video mixer (and debug output)
 `define VIDEO_MIXER
 `ifdef VIDEO_MIXER
@@ -63,7 +60,7 @@ module video
   input			[3:0]		VGA_G4,
   input			[3:0]		VGA_B4,
   
-`ifdef DEBUG_OUTPUT
+`ifdef LITE
   input			[63:0]   DEBUG_OUT0,
   input			[63:0]   DEBUG_OUT1,
   input			[63:0]   DEBUG_OUT2,
@@ -316,7 +313,7 @@ begin
 	end
 end
 
-`ifdef DEBUG_OUTPUT
+`ifdef LITE
 reg	[1:0]	FR, FG, FB;
 Analyzer Analyzer
 (
