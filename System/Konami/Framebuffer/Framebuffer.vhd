@@ -99,9 +99,21 @@ architecture System of Framebuffer is
 	signal video_wram_we          : std_logic;
 	signal video_wram_do          : std_logic_vector( 7 downto 0);
 	
---	-- CMOS signals (data-out and write-enabled)
---	signal cmos_do         : std_logic_vector( 7 downto 0);
---	signal cmos_we         : std_logic;
+	--	machine data
+	signal int_control : std_logic;
+	signal flip_screen_x : std_logic := '0';
+	signal flip_screen_y : std_logic := '0';
+	--$8040   - Sound CPU req/ack data - TODO !!
+	--$8050   - Sound CPU command data - TODO !!
+	signal mem_bank_select : std_logic_vector(7 downto 0);
+	signal blit_src_data : std_logic_vector(15 downto 0);
+	signal blit_dst_data : std_logic_vector(15 downto 0);
+	signal blit_trigger : std_logic;
+	signal blit_ackn : std_logic;
+	
+	-- dip switches
+	signal dip_1 : std_logic_vector(7 downto 0) := X"00";
+	signal dip_2 : std_logic_vector(7 downto 0) := X"00";
 	
 	-- Video control signals
 	signal video_addr_output    : std_logic_vector(14 downto 0);
@@ -277,8 +289,14 @@ end generate;
 	--		TODO: Does bit 1 of the source address mean something?
 	--          We have to mask it off otherwise the "Juno First" logo on the title screen is wrong
 	
-	
-	-- TODO !!!!
+	process(i_Clk)
+		-- variable x : std_logic_vector(7 downto 0) := X"00";
+	begin
+		if rising_edge(i_Clk) then
+			
+			
+		end if;
+	end process;
 		
 	----------------------------------------------------------------------------------------------------------
 	-- Main Processor i/o control
@@ -286,6 +304,8 @@ end generate;
 	
 	-- mux cpu in data between roms/io/wram
 	cpu_di <=
+		dip_1 when cpu_addr = X"8010" else
+		dip_2 when cpu_addr = X"802c" else
 		prom_buses(5) when cpu_addr(15 downto 8) >= X"F0" else
 		prom_buses(4) when cpu_addr(15 downto 8) >= X"E0" else
 		prom_buses(3) when cpu_addr(15 downto 8) >= X"D0" else
@@ -300,6 +320,17 @@ end generate;
 	cpu_wram_we   <= cpu_we when ((cpu_addr(15 downto 12) >= X"8") and (cpu_addr(15 downto 12) < X"9")) else '0';
 	video_wram_addr <= cpu_addr(14 downto 0) when (cpu_addr(15 downto 12) < X"8") else "000" & X"000";
 	video_wram_we <= cpu_we when (cpu_addr(15 downto 12) < X"8") else '0';
+	
+	-- machine data
+	int_control <= cpu_do(0) when cpu_addr = X"8030" and cpu_we = '1' else '0';
+	flip_screen_x <= cpu_do(0) when cpu_addr = X"8034" and cpu_we = '1' else '0';
+	flip_screen_y <= cpu_do(0) when cpu_addr = X"8035" and cpu_we = '1' else '0';
+	mem_bank_select <= cpu_do when cpu_addr = X"8060" and cpu_we = '1' else X"00";
+	blit_src_data(15 downto 8) <= cpu_do when cpu_addr = X"8070" and cpu_we = '1' else X"00";
+	blit_src_data( 7 downto 0) <= cpu_do when cpu_addr = X"8071" and cpu_we = '1' else X"00";
+	blit_dst_data(15 downto 8) <= cpu_do when cpu_addr = X"8072" and cpu_we = '1' else X"00";
+	blit_dst_data( 7 downto 0) <= cpu_do when cpu_addr = X"8073" and cpu_we = '1' else X"00";
+	blit_trigger <= '0' when blit_ackn = '1' else '1' when cpu_addr = X"8073" and cpu_we = '1' else '0';
 	
 	----------------------------------------------------------------------------------------------------------
 	-- Video update
