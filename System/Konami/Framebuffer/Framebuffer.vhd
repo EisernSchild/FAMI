@@ -176,6 +176,39 @@ end generate;
 	-- Memory Mapping
 	----------------------------------------------------------------------------------------------------------
 	
+	--Read/Write memory
+	--$0000-$7FFF = Screen RAM (only written to)
+	--$8000-$800f = Palette RAM. BBGGGRRR (D7->D0)
+	--$8100-$8FFF = Work RAM
+	--Write memory
+	--$8030   - interrupt control register D0 = interrupts on or off
+	--$8031   - unknown
+	--$8032   - unknown
+	--$8033   - unknown
+	--$8034   - flip screen x
+	--$8035   - flip screen y
+	--$8040   - Sound CPU req/ack data
+	--$8050   - Sound CPU command data
+	--$8060   - Banked memory page select.
+	--$8070/1 - Blitter source data word
+	--$8072/3 - Blitter destination word. Write to $8073 triggers a blit
+	--Read memory
+	--$8010   - Dipswitch 2
+	--$801c   - Watchdog
+	--$8020   - Start/Credit IO
+	--                D2 = Credit 1
+	--                D3 = Start 1
+	--                D4 = Start 2
+	--$8024   - P1 IO
+	--                D0 = left
+	--                D1 = right
+	--                D2 = up
+	--                D3 = down
+	--                D4 = fire 2
+	--                D5 = fire 1
+	--$8028   - P2 IO - same as P1 IO
+	--$802c   - Dipswitch 1
+	
 	-- $0000 - $7FFF : direct video RAM access - Page 0 $0000-$7FFF / Page 1 $8000-$FFFF
 	Video_RAM : work.dpram generic map (nGenRamADDrWidthVideo, nGenRamDataWidth)
 	port map
@@ -229,6 +262,23 @@ end generate;
 	--	
 	-- PROM_7a : entity work.PROM_11_7A port map (CLK => spu_clock, ADDR => spu_rom_addr, DATA => prom_buses(27));
 	-- PROM_8a : entity work.PROM_10_8A port map (CLK => spu_clock, ADDR => spu_rom_addr, DATA => prom_buses(27));
+	
+	----------------------------------------------------------------------------------------------------------
+	-- Juno First Blitter Hardware
+	----------------------------------------------------------------------------------------------------------
+	
+	--		Juno First can blit a 16x16 graphics which comes from un-memory mapped graphics roms
+	--		$8070->$8071 specifies the destination NIBBLE address
+	--		$8072->$8073 specifies the source NIBBLE address
+	--		Depending on bit 0 of the source address either the source pixels will be copied to
+	--		the destination address, or a zero will be written.
+	--		Only source pixels which aren't 0 are copied or cleared.
+	--		This allows the game to quickly clear the sprites from the screen
+	--		TODO: Does bit 1 of the source address mean something?
+	--          We have to mask it off otherwise the "Juno First" logo on the title screen is wrong
+	
+	
+	-- TODO !!!!
 		
 	----------------------------------------------------------------------------------------------------------
 	-- Main Processor i/o control
@@ -250,6 +300,49 @@ end generate;
 	cpu_wram_we   <= cpu_we when ((cpu_addr(15 downto 12) >= X"8") and (cpu_addr(15 downto 12) < X"9")) else '0';
 	video_wram_addr <= cpu_addr(14 downto 0) when (cpu_addr(15 downto 12) < X"8") else "000" & X"000";
 	video_wram_we <= cpu_we when (cpu_addr(15 downto 12) < X"8") else '0';
+	
+	----------------------------------------------------------------------------------------------------------
+	-- Video update
+	----------------------------------------------------------------------------------------------------------
+	
+	-- TODO !! FLIP X/Y
+	
+	-- vrambyte = m_videoram[effy * 128 + effx / 2];
+	
+	process(i_Clk)
+		variable video_h_counter : std_logic_vector(7 downto 0) := X"00";
+		variable video_v_counter : std_logic_vector(7 downto 0) := X"00";
+		variable h_buff : std_logic_vector(7 downto 0) := X"00";
+		variable v_buff : std_logic_vector(7 downto 0) := X"00";
+	begin
+		if rising_edge(i_Clk) then
+			
+			if (video_h_counter = X"FF") then 
+				h_buff := X"40";
+			
+				if (v_buff > X"00") then
+					v_buff := v_buff - X"01";
+				else
+					video_v_counter := video_v_counter + X"01";
+				end if;
+				
+			end if;
+			
+			if (video_v_counter = X"FF") then
+				v_buff := X"20";
+			
+			end if;
+			
+			if (h_buff > X"00") then
+				h_buff := h_buff - X"01";
+			else
+				video_h_counter := video_h_counter + X"01";
+			end if;
+			
+			video_addr_output <= video_v_counter(7 downto 0) & video_h_counter(7 downto 1);
+			
+		end if;
+	end process;
 	
 	-- pixel output
 	o_VGA_R4 <= video_pixel(7 downto 4);
