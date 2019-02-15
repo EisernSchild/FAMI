@@ -82,7 +82,7 @@ architecture System of Framebuffer is
 	signal cpu_di         : std_logic_vector( 7 downto 0);
 	signal cpu_do         : std_logic_vector( 7 downto 0);
 	signal cpu_rw         : std_logic;
-	signal cpu_irq        : std_logic;
+	signal cpu_irq        : std_logic := '0';
 	signal cpu_firq       : std_logic := '1';
 	signal cpu_we, cpu_oe : std_logic;
 	signal cpu_state      : std_logic_vector( 5 downto 0);
@@ -135,18 +135,30 @@ begin
 
 lite_label : if LITE_BUILD generate
 	-- debug program counter markers	
-	debug_02 : process(cpu_clock_e)
+	debug_02 : process(i_Clk)
 	begin
-		if rising_edge(cpu_clock_e) then
-			case RegData_cpu(111 downto 96) is
-				when X"fff1" => Debug_cpu(0) <= '1';
-				when X"fff2" => Debug_cpu(1) <= '1';
-				when X"fff3" => Debug_cpu(2) <= '1';
-				when X"fff4" => Debug_cpu(3) <= '1';
-				when X"fff5" => Debug_cpu(4) <= '1';
-				when X"fff6" => Debug_cpu(5) <= '1';
+		if rising_edge(i_Clk) then
+			case RegData_cpu(111 downto 96) is				
+				when X"a372" => Debug_cpu(0) <= '1';
+				when X"a373" => Debug_cpu(1) <= '1';
+				when X"a376" => Debug_cpu(2) <= '1';
+				when X"a379" => Debug_cpu(3) <= '1';
+				when X"a37b" => Debug_cpu(4) <= '1';
+				when X"a37c" => Debug_cpu(5) <= '1';
+				when X"a37e" => Debug_cpu(6) <= '1';
+				when X"a380" => Debug_cpu(7) <= '1';
+				when X"a382" => Debug_cpu(8) <= '1';
+				when X"a3d6" => Debug_cpu(9) <= '1';
+				when X"a3e5" => Debug_cpu(10) <= '1';				
+				when X"a470" => Debug_cpu(11) <= '1';
+				when X"a488" => Debug_cpu(12) <= '1';
+				when X"a48f" => Debug_cpu(13) <= '1';
+				when X"a49b" => Debug_cpu(14) <= '1';
+				-- when X"d71a" => Debug_cpu(6) <= '1';
 				when others => Debug_cpu(15) <= '1';
 			end case;
+			
+
 		end if;	
 	end process debug_02;	
 	o_RegData_cpu <= RegData_cpu;
@@ -171,8 +183,8 @@ lite_label1 : if LITE_BUILD generate
 		Q        => cpu_clock_q, -- output clock Q
 		BS       => cpu_bs,      -- bus status
 		BA       => cpu_ba,      -- bus available
-		nIRQ     => not cpu_irq, -- interrupt request
-		nFIRQ    => cpu_firq,    -- fast interrupt request
+		nIRQ     => '1',         -- interrupt request
+		nFIRQ    => '1',         -- fast interrupt request
 		nNMI     => '1',         -- non-maskable interrupt
 		EXTAL    => i_Clk,       -- input oscillator
 		XTAL     => '0',         -- input oscillator
@@ -221,7 +233,7 @@ end generate;
 	--$8028   - P2 IO - same as P1 IO
 	--$802c   - Dipswitch 1
 	
-	-- $0000 - $7FFF : direct video RAM access - Page 0 $0000-$7FFF / Page 1 $8000-$FFFF
+	-- $0000 - $7FFF : direct video RAM access 
 	Video_RAM : work.dpram generic map (nGenRamADDrWidthVideo, nGenRamDataWidth)
 	port map
 	(
@@ -306,18 +318,18 @@ end generate;
 	cpu_di <=
 		dip_1 when cpu_addr = X"8010" else
 		dip_2 when cpu_addr = X"802c" else
-		prom_buses(5) when cpu_addr(15 downto 8) >= X"F0" else
-		prom_buses(4) when cpu_addr(15 downto 8) >= X"E0" else
-		prom_buses(3) when cpu_addr(15 downto 8) >= X"D0" else
-		prom_buses(2) when cpu_addr(15 downto 8) >= X"C0" else
-		prom_buses(1) when cpu_addr(15 downto 8) >= X"B0" else
-		prom_buses(0) when cpu_addr(15 downto 8) >= X"A0" else
-		cpu_wram_do   when cpu_addr(15 downto 8) >= X"80" else video_wram_do;
+		prom_buses(5) when cpu_addr(15 downto 12) = X"F" else
+		prom_buses(4) when cpu_addr(15 downto 12) = X"E" else
+		prom_buses(3) when cpu_addr(15 downto 12) = X"D" else
+		prom_buses(2) when cpu_addr(15 downto 12) = X"C" else
+		prom_buses(1) when cpu_addr(15 downto 12) = X"B" else
+		prom_buses(0) when cpu_addr(15 downto 12) = X"A" else
+		cpu_wram_do   when cpu_addr(15 downto 12) = X"8" else video_wram_do;
 		
 	-- assign cpu in/out data addresses	
 	cpu_rom_addr  <= cpu_addr(11 downto 0) when cpu_addr(15 downto 12) >= X"A" else X"000";
-	cpu_wram_addr <= cpu_addr(11 downto 0) when ((cpu_addr(15 downto 12) >= X"8") and (cpu_addr(15 downto 12) < X"9")) else X"000";
-	cpu_wram_we   <= cpu_we when ((cpu_addr(15 downto 12) >= X"8") and (cpu_addr(15 downto 12) < X"9")) else '0';
+	cpu_wram_addr <= cpu_addr(11 downto 0) when (cpu_addr(15 downto 12) = X"8") else X"000";
+	cpu_wram_we   <= cpu_we when (cpu_addr(15 downto 12) = X"8") else '0';
 	video_wram_addr <= cpu_addr(14 downto 0) when (cpu_addr(15 downto 12) < X"8") else "000" & X"000";
 	video_wram_we <= cpu_we when (cpu_addr(15 downto 12) < X"8") else '0';
 	
