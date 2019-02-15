@@ -183,7 +183,7 @@ lite_label1 : if LITE_BUILD generate
 		Q        => cpu_clock_q, -- output clock Q
 		BS       => cpu_bs,      -- bus status
 		BA       => cpu_ba,      -- bus available
-		nIRQ     => '1',         -- interrupt request
+		nIRQ     => cpu_irq,     -- interrupt request
 		nFIRQ    => '1',         -- fast interrupt request
 		nNMI     => '1',         -- non-maskable interrupt
 		EXTAL    => i_Clk,       -- input oscillator
@@ -355,29 +355,43 @@ end generate;
 	process(i_Clk)
 		variable video_h_counter : std_logic_vector(7 downto 0) := X"00";
 		variable video_v_counter : std_logic_vector(7 downto 0) := X"00";
-		variable h_buff : std_logic_vector(7 downto 0) := X"00";
-		variable v_buff : std_logic_vector(7 downto 0) := X"00";
+		variable h_porch : std_logic_vector(7 downto 0) := X"00";
+		variable v_porch : std_logic_vector(7 downto 0) := X"00";
 	begin
 		if rising_edge(i_Clk) then
 			
+			-- horizontal sync
 			if (video_h_counter = X"FF") then 
-				h_buff := X"40";
 			
-				if (v_buff > X"00") then
-					v_buff := v_buff - X"01";
+				-- set horizontal porch
+				h_porch := X"40";
+			
+				-- handle vertical counter/porch
+				if (v_porch > X"00") then
+				
+					-- vertical blank : flip flops cause the interrupt to be signalled every other frame
+					if (v_porch = X"01") then
+						cpu_irq <= '0';
+					end if;
+					
+					v_porch := v_porch - X"01";
 				else
 					video_v_counter := video_v_counter + X"01";
+					
+					-- no interrupt here
+					cpu_irq <= '1';
 				end if;
 				
 			end if;
 			
+			-- vertical sync
 			if (video_v_counter = X"FF") then
-				v_buff := X"20";
-			
+				v_porch := X"20";			
 			end if;
 			
-			if (h_buff > X"00") then
-				h_buff := h_buff - X"01";
+			-- handle horizontal counter/porch
+			if (h_porch > X"00") then
+				h_porch := h_porch - X"01";
 			else
 				video_h_counter := video_h_counter + X"01";
 			end if;
