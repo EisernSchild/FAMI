@@ -407,10 +407,10 @@ end generate;
 	-- vrambyte = m_videoram[effy * 128 + effx / 2];
 	
 	process(i_Clk)
-		variable video_h_counter : std_logic_vector(7 downto 0) := X"00";
-		variable video_v_counter : std_logic_vector(7 downto 0) := X"00";
-		variable h_porch : std_logic_vector(7 downto 0) := X"00";
-		variable v_porch : std_logic_vector(7 downto 0) := X"00";
+		variable video_h_counter : std_logic_vector(7 downto 0) := X"FF";
+		variable video_v_counter : std_logic_vector(7 downto 0) := X"FF";
+		variable h_porch : std_logic_vector(7 downto 0) := X"08"; -- set to front porch
+		variable v_porch : std_logic_vector(7 downto 0) := X"08"; -- set to front porch
 		variable lock_cpu : std_logic := '0';
 	begin
 		if rising_edge(i_Clk) then
@@ -426,7 +426,7 @@ end generate;
 			end if;
 			
 			-- horizontal porch
-			if (h_porch = X"40") then
+			if (h_porch = X"41") then
 			
 				-- horizontal new line
 				video_h_counter := X"00";
@@ -441,7 +441,7 @@ end generate;
 				end if;
 				
 				-- vertical porch
-				if (v_porch = X"20") then
+				if (v_porch = X"21") then
 				
 					-- vertical new screen
 					video_v_counter := X"00";
@@ -466,7 +466,7 @@ end generate;
 		
 			end if;
 			
-			video_addr_output <= video_v_counter(7 downto 0) & video_h_counter(7 downto 1);
+			video_addr_output <= video_h_counter(7 downto 0) & ( not video_v_counter(7 downto 1));
 			
 		end if; 
 	end process;
