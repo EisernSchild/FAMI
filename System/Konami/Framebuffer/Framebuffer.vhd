@@ -35,7 +35,7 @@ generic
 );
 port
 (
-	i_Clk       : in std_logic; -- input clock  !! TODO !!
+	i_Clk       : in std_logic; -- input clock  1.53 Mhz
 	i_Reset     : in std_logic; -- reset when 1
 	
 	o_RegData_cpu  : out std_logic_vector(111 downto 0);
