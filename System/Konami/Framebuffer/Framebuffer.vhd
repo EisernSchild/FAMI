@@ -125,44 +125,98 @@ architecture System of Framebuffer is
 	
 	-- debug
 	signal RegData_cpu  : std_logic_vector(111 downto 0);
-	signal Debug_cpu : std_logic_vector(15 downto 0) := X"0000";
+--	signal Debug_cpu : std_logic_vector(15 downto 0) := X"0000";
+	type   Debug_flags is array (0 to 15) of boolean;
+	signal Debug_cpu : Debug_flags := (others => false);
 		
 begin
 
 	----------------------------------------------------------------------------------------------------------
 	-- Clocks
 	----------------------------------------------------------------------------------------------------------
-
+	
 lite_label : if LITE_BUILD generate
 	-- debug program counter markers	
 	debug_02 : process(i_Clk)
 	begin
 		if rising_edge(i_Clk) then
-			case RegData_cpu(111 downto 96) is				
-				when X"a372" => Debug_cpu(0) <= '1';
-				when X"a373" => Debug_cpu(1) <= '1';
-				when X"a376" => Debug_cpu(2) <= '1';
-				when X"a379" => Debug_cpu(3) <= '1';
-				when X"a37b" => Debug_cpu(4) <= '1';
-				when X"a37c" => Debug_cpu(5) <= '1';
-				when X"a37e" => Debug_cpu(6) <= '1';
-				when X"a380" => Debug_cpu(7) <= '1';
-				when X"a382" => Debug_cpu(8) <= '1';
-				when X"a3d6" => Debug_cpu(9) <= '1';
-				when X"a3e5" => Debug_cpu(10) <= '1';				
-				when X"a470" => Debug_cpu(11) <= '1';
-				when X"a488" => Debug_cpu(12) <= '1';
-				when X"a48f" => Debug_cpu(13) <= '1';
-				when X"a49b" => Debug_cpu(14) <= '1';
-				-- when X"d71a" => Debug_cpu(6) <= '1';
-				when others => Debug_cpu(15) <= '1';
+			
+			case RegData_cpu(111 downto 96) is	
+				when X"a370" => Debug_cpu(0) <= true;			
+				when X"a371" => Debug_cpu(1) <= true;
+				when X"a372" => Debug_cpu(2) <= true;
+				when X"a373" => Debug_cpu(3) <= true;	
+				
+				when X"a374" => Debug_cpu(4) <= true;
+				when X"a375" => Debug_cpu(5) <= true;
+				when X"a376" => Debug_cpu(6) <= true;
+				when X"a377" => Debug_cpu(7) <= true;
+				when X"a378" => Debug_cpu(8) <= true;
+				when X"a379" => Debug_cpu(9) <= true;
+				when X"a37a" => Debug_cpu(10) <= true;
+							
+				when X"a37b" => Debug_cpu(11) <= true;
+				when X"a37c" => Debug_cpu(12) <= true;
+				when X"a37d" => Debug_cpu(13) <= true;
+				when X"a37e" => Debug_cpu(14) <= true;
+				when X"a37f" => Debug_cpu(15) <= true;
+				
+--				when X"a006" => Debug_cpu(0) <= true;			
+--				when X"a382" => Debug_cpu(1) <= true;
+--				when X"a384" => Debug_cpu(2) <= true;
+--				when X"a388" => Debug_cpu(3) <= true;	
+--				
+--				when X"a38b" => Debug_cpu(4) <= true;
+--				when X"a38e" => Debug_cpu(5) <= true;
+--				when X"a390" => Debug_cpu(6) <= true;
+--				when X"a393" => Debug_cpu(7) <= true;
+--				when X"a396" => Debug_cpu(8) <= true;
+--				when X"a399" => Debug_cpu(9) <= true;
+--				when X"a39b" => Debug_cpu(10) <= true;
+--							
+--				when X"a39e" => Debug_cpu(11) <= true;
+--				when X"d71a" => Debug_cpu(12) <= true;
+--				when X"a48f" => Debug_cpu(13) <= true;
+--				when X"a49b" => Debug_cpu(14) <= true;
+				-- when X"d71a" => Debug_cpu(6) <= true;
+				when others => Debug_cpu(0) <= false;
+					Debug_cpu(1) <= false;
+					Debug_cpu(2) <= false;
+					Debug_cpu(3) <= false;
+					Debug_cpu(4) <= false;
+					Debug_cpu(5) <= false;
+					Debug_cpu(6) <= false;
+					Debug_cpu(7) <= false;
+					Debug_cpu(8) <= false;
+					Debug_cpu(9) <= false;
+					Debug_cpu(10) <= false;
+					Debug_cpu(11) <= false;
+					Debug_cpu(12) <= false;
+					Debug_cpu(13) <= false;
+					Debug_cpu(14) <= false;
+					Debug_cpu(15) <= false;
 			end case;
 			
 
 		end if;	
 	end process debug_02;	
 	o_RegData_cpu <= RegData_cpu;
-	o_Debug_cpu <= Debug_cpu;
+	o_Debug_cpu(0) <= '1' when Debug_cpu(0) else '0';
+	o_Debug_cpu(1) <= '1' when Debug_cpu(1) else '0';
+	o_Debug_cpu(2) <= '1' when Debug_cpu(2) else '0';
+	o_Debug_cpu(3) <= '1' when Debug_cpu(3) else '0';
+	o_Debug_cpu(4) <= '1' when Debug_cpu(4) else '0';
+	o_Debug_cpu(5) <= '1' when Debug_cpu(5) else '0';
+	o_Debug_cpu(6) <= '1' when Debug_cpu(6) else '0';
+	o_Debug_cpu(7) <= '1' when Debug_cpu(7) else '0';
+	o_Debug_cpu(8) <= '1' when Debug_cpu(8) else '0';
+	o_Debug_cpu(9) <= '1' when Debug_cpu(9) else '0';
+	o_Debug_cpu(10) <= '1' when Debug_cpu(10) else '0';
+	o_Debug_cpu(11) <= '1' when Debug_cpu(11) else '0';
+	o_Debug_cpu(12) <= '1' when Debug_cpu(12) else '0';
+	o_Debug_cpu(13) <= '1' when Debug_cpu(13) else '0';
+	o_Debug_cpu(14) <= '1' when Debug_cpu(14) else '0';
+	o_Debug_cpu(15) <= '1' when Debug_cpu(15) else '0';
 end generate;
 	
 	----------------------------------------------------------------------------------------------------------
@@ -357,48 +411,64 @@ end generate;
 		variable video_v_counter : std_logic_vector(7 downto 0) := X"00";
 		variable h_porch : std_logic_vector(7 downto 0) := X"00";
 		variable v_porch : std_logic_vector(7 downto 0) := X"00";
+		variable lock_cpu : std_logic := '0';
 	begin
 		if rising_edge(i_Clk) then
+			-- cpu bus ?
+			if (cpu_bs = '1') and (cpu_ba = '0') then lock_cpu := '1'; cpu_irq <= '1'; else lock_cpu:='0'; end if;
 			
 			-- horizontal sync
-			if (video_h_counter = X"FF") then 
-			
-				-- set horizontal porch
-				h_porch := X"40";
-			
-				-- handle vertical counter/porch
-				if (v_porch > X"00") then
+			if (video_h_counter = X"FF") then
 				
-					-- vertical blank : flip flops cause the interrupt to be signalled every other frame
-					if (v_porch = X"01") then
+				-- set horizontal porch
+				h_porch := h_porch + X"01";
+				
+			end if;
+			
+			-- horizontal porch
+			if (h_porch = X"40") then
+			
+				-- horizontal new line
+				video_h_counter := X"00";
+				h_porch := X"00";
+				
+				-- vertical sync
+				if (video_v_counter = X"FF") then
+					
+					-- set horizontal porch
+					v_porch := v_porch + X"01";
+					
+				end if;
+				
+				-- vertical porch
+				if (v_porch = X"20") then
+				
+					-- vertical new screen
+					video_v_counter := X"00";
+					v_porch := X"00";
+					
+					-- cpu irq by vertical sync ?
+					if (lock_cpu = '0') then
 						cpu_irq <= '0';
 					end if;
 					
-					v_porch := v_porch - X"01";
-				else
+				elsif (v_porch = X"00") then
+			
+					-- set horizontal counter
 					video_v_counter := video_v_counter + X"01";
-					
-					-- no interrupt here
-					cpu_irq <= '1';
-				end if;
-				
-			end if;
 			
-			-- vertical sync
-			if (video_v_counter = X"FF") then
-				v_porch := X"20";			
-			end if;
+				end if;				
 			
-			-- handle horizontal counter/porch
-			if (h_porch > X"00") then
-				h_porch := h_porch - X"01";
-			else
+			elsif (h_porch = X"00") then
+			
+				-- set horizontal counter
 				video_h_counter := video_h_counter + X"01";
+		
 			end if;
 			
 			video_addr_output <= video_v_counter(7 downto 0) & video_h_counter(7 downto 1);
 			
-		end if;
+		end if; 
 	end process;
 	
 	-- pixel output
