@@ -118,6 +118,11 @@ architecture System of Framebuffer is
 	-- Video control signals
 	signal video_addr_output    : std_logic_vector(14 downto 0);
 	signal video_pixel		    : std_logic_vector( 7 downto 0);
+	signal video_pixel_shift    : std_logic;
+	signal video_pixel_palette  : std_logic_vector( 3 downto 0);
+	type PALETTE is array (15 downto 0) of std_logic_vector(11 downto 0);
+	constant video_palette : PALETTE := (X"F0F",X"AA5",X"0F5",X"555",X"91F",X"F91",X"A09",X"19A",X"89F",X"AFF",X"00F",X"F00",X"80F",X"AF0",X"0AF",X"F0A");
+	
 	
 	-- PROM buses
 	type   prom_buses_array is array (0 to 27) of std_logic_vector(7 downto 0);
@@ -125,7 +130,6 @@ architecture System of Framebuffer is
 	
 	-- debug
 	signal RegData_cpu  : std_logic_vector(111 downto 0);
---	signal Debug_cpu : std_logic_vector(15 downto 0) := X"0000";
 	type   Debug_flags is array (0 to 15) of boolean;
 	signal Debug_cpu : Debug_flags := (others => false);
 		
@@ -161,24 +165,6 @@ lite_label : if LITE_BUILD generate
 				when X"a37e" => Debug_cpu(14) <= true;
 				when X"a37f" => Debug_cpu(15) <= true;
 				
---				when X"a006" => Debug_cpu(0) <= true;			
---				when X"a382" => Debug_cpu(1) <= true;
---				when X"a384" => Debug_cpu(2) <= true;
---				when X"a388" => Debug_cpu(3) <= true;	
---				
---				when X"a38b" => Debug_cpu(4) <= true;
---				when X"a38e" => Debug_cpu(5) <= true;
---				when X"a390" => Debug_cpu(6) <= true;
---				when X"a393" => Debug_cpu(7) <= true;
---				when X"a396" => Debug_cpu(8) <= true;
---				when X"a399" => Debug_cpu(9) <= true;
---				when X"a39b" => Debug_cpu(10) <= true;
---							
---				when X"a39e" => Debug_cpu(11) <= true;
---				when X"d71a" => Debug_cpu(12) <= true;
---				when X"a48f" => Debug_cpu(13) <= true;
---				when X"a49b" => Debug_cpu(14) <= true;
-				-- when X"d71a" => Debug_cpu(6) <= true;
 				when others => Debug_cpu(0) <= false;
 					Debug_cpu(1) <= false;
 					Debug_cpu(2) <= false;
@@ -466,15 +452,17 @@ end generate;
 		
 			end if;
 			
-			video_addr_output <= video_h_counter(7 downto 0) & ( not video_v_counter(7 downto 1));
+			video_addr_output <= video_h_counter(7 downto 0) & (not video_v_counter(7 downto 1));
+			video_pixel_shift <= not video_v_counter(0);
 			
 		end if; 
 	end process;
 	
 	-- pixel output
-	o_VGA_R4 <= video_pixel(7 downto 4);
-	o_VGA_G4 <= video_pixel(7 downto 4);
-	o_VGA_B4 <= video_pixel(3 downto 0);
+	video_pixel_palette <= video_pixel(7 downto 4) when (video_pixel_shift = '1') else video_pixel(3 downto 0);
+	o_VGA_R4 <= video_palette(to_integer(unsigned(video_pixel_palette)))(11 downto 8); -- video_pixel(7 downto 4);
+	o_VGA_G4 <= video_palette(to_integer(unsigned(video_pixel_palette)))( 7 downto 4); -- video_pixel(7 downto 4);
+	o_VGA_B4 <= video_palette(to_integer(unsigned(video_pixel_palette)))( 3 downto 0); -- video_pixel(3 downto 0);
 	
 
 end System;
