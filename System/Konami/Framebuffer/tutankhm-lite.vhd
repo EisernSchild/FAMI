@@ -16,9 +16,11 @@
 
 package FAMI_package is
 
-	-- game rom name, lite build enabled
+	-- game rom name, lite build enabled, game >Tutankham<
 	type game_rom_enum is (junofrst, tutankhm);
 	constant LITE_BUILD : boolean := true;
+	constant JUNO_FIRST : boolean := false;
+	constant TUTANKHAM : boolean := true;
 	constant GAME_ROM : game_rom_enum := tutankhm;
 	
 end package;

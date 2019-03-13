@@ -140,69 +140,7 @@ begin
 	----------------------------------------------------------------------------------------------------------
 	
 lite_label : if LITE_BUILD generate
-	-- debug program counter markers	
-	debug_02 : process(i_Clk)
-	begin
-		if rising_edge(i_Clk) then
-			
-			case RegData_cpu(111 downto 96) is	
-				when X"a370" => Debug_cpu(0) <= true;			
-				when X"a371" => Debug_cpu(1) <= true;
-				when X"a372" => Debug_cpu(2) <= true;
-				when X"a373" => Debug_cpu(3) <= true;	
-				
-				when X"a374" => Debug_cpu(4) <= true;
-				when X"a375" => Debug_cpu(5) <= true;
-				when X"a376" => Debug_cpu(6) <= true;
-				when X"a377" => Debug_cpu(7) <= true;
-				when X"a378" => Debug_cpu(8) <= true;
-				when X"a379" => Debug_cpu(9) <= true;
-				when X"a37a" => Debug_cpu(10) <= true;
-							
-				when X"a37b" => Debug_cpu(11) <= true;
-				when X"a37c" => Debug_cpu(12) <= true;
-				when X"a37d" => Debug_cpu(13) <= true;
-				when X"a37e" => Debug_cpu(14) <= true;
-				when X"a37f" => Debug_cpu(15) <= true;
-				
-				when others => Debug_cpu(0) <= false;
-					Debug_cpu(1) <= false;
-					Debug_cpu(2) <= false;
-					Debug_cpu(3) <= false;
-					Debug_cpu(4) <= false;
-					Debug_cpu(5) <= false;
-					Debug_cpu(6) <= false;
-					Debug_cpu(7) <= false;
-					Debug_cpu(8) <= false;
-					Debug_cpu(9) <= false;
-					Debug_cpu(10) <= false;
-					Debug_cpu(11) <= false;
-					Debug_cpu(12) <= false;
-					Debug_cpu(13) <= false;
-					Debug_cpu(14) <= false;
-					Debug_cpu(15) <= false;
-			end case;
-			
 
-		end if;	
-	end process debug_02;	
-	o_RegData_cpu <= RegData_cpu;
-	o_Debug_cpu(0) <= '1' when Debug_cpu(0) else '0';
-	o_Debug_cpu(1) <= '1' when Debug_cpu(1) else '0';
-	o_Debug_cpu(2) <= '1' when Debug_cpu(2) else '0';
-	o_Debug_cpu(3) <= '1' when Debug_cpu(3) else '0';
-	o_Debug_cpu(4) <= '1' when Debug_cpu(4) else '0';
-	o_Debug_cpu(5) <= '1' when Debug_cpu(5) else '0';
-	o_Debug_cpu(6) <= '1' when Debug_cpu(6) else '0';
-	o_Debug_cpu(7) <= '1' when Debug_cpu(7) else '0';
-	o_Debug_cpu(8) <= '1' when Debug_cpu(8) else '0';
-	o_Debug_cpu(9) <= '1' when Debug_cpu(9) else '0';
-	o_Debug_cpu(10) <= '1' when Debug_cpu(10) else '0';
-	o_Debug_cpu(11) <= '1' when Debug_cpu(11) else '0';
-	o_Debug_cpu(12) <= '1' when Debug_cpu(12) else '0';
-	o_Debug_cpu(13) <= '1' when Debug_cpu(13) else '0';
-	o_Debug_cpu(14) <= '1' when Debug_cpu(14) else '0';
-	o_Debug_cpu(15) <= '1' when Debug_cpu(15) else '0';
 end generate;
 	
 	----------------------------------------------------------------------------------------------------------
@@ -240,38 +178,92 @@ end generate;
 	-- Memory Mapping
 	----------------------------------------------------------------------------------------------------------
 	
-	--Read/Write memory
-	--$0000-$7FFF = Screen RAM (only written to)
-	--$8000-$800f = Palette RAM. BBGGGRRR (D7->D0)
-	--$8100-$8FFF = Work RAM
-	--Write memory
-	--$8030   - interrupt control register D0 = interrupts on or off
-	--$8031   - unknown
-	--$8032   - unknown
-	--$8033   - unknown
-	--$8034   - flip screen x
-	--$8035   - flip screen y
-	--$8040   - Sound CPU req/ack data
-	--$8050   - Sound CPU command data
-	--$8060   - Banked memory page select.
-	--$8070/1 - Blitter source data word
-	--$8072/3 - Blitter destination word. Write to $8073 triggers a blit
-	--Read memory
-	--$8010   - Dipswitch 2
-	--$801c   - Watchdog
-	--$8020   - Start/Credit IO
+	-- Juno First
+	--
+	-- Read/Write memory
+	-- $0000-$7FFF = Screen RAM (only written to)
+	-- $8000-$800f = Palette RAM. BBGGGRRR (D7->D0)
+	-- $8100-$8FFF = Work RAM
+	-- Write memory
+	-- $8030   - interrupt control register D0 = interrupts on or off
+	-- $8031   - unknown
+	-- $8032   - unknown
+	-- $8033   - unknown
+	-- $8034   - flip screen x
+	-- $8035   - flip screen y
+	-- $8040   - Sound CPU req/ack data
+	-- $8050   - Sound CPU command data
+	-- $8060   - Banked memory page select.
+	-- $8070/1 - Blitter source data word
+	-- $8072/3 - Blitter destination word. Write to $8073 triggers a blit
+	-- Read memory
+	-- $8010   - Dipswitch 2
+	-- $801c   - Watchdog
+	-- $8020   - Start/Credit IO
 	--                D2 = Credit 1
 	--                D3 = Start 1
 	--                D4 = Start 2
-	--$8024   - P1 IO
+	-- $8024   - P1 IO
 	--                D0 = left
 	--                D1 = right
 	--                D2 = up
 	--                D3 = down
 	--                D4 = fire 2
 	--                D5 = fire 1
-	--$8028   - P2 IO - same as P1 IO
-	--$802c   - Dipswitch 1
+	-- $8028   - P2 IO - same as P1 IO
+	-- $802c   - Dipswitch 1
+	
+	-- Tutankham
+	--
+	--	0x0000-0x7FFF	32768	RAM, Shared	videoram
+	--	0x8000-0x800F	16	Mirror, RAM Device Write, Shared	0x00f0, palette, palette_device, write, palette
+	--	0x8100	1	Mirror, RAM, Shared	0x000f, , scroll
+	--	0x8120	1	Mirror, Device Read	0x000f, watchdog, watchdog_timer_device, reset_r
+	--	0x8160	1	Mirror, Read Port	0x000f, DSW2 (/* DSW2 (inverted bits) */)
+	--		0x0003	Lives	Active High
+	--		0x0003	3	Active High
+	--		0x0001	4	Active High
+	--		0x0002	5	Active High
+	--		0x0000	255 (Cheat)	Active High
+	--		0x0004	Cabinet	Active High
+	--		0x0000	Upright	Active High
+	--		0x0004	Cocktail	Active High
+	--		0x0008	Bonus_Life	Active High
+	--		0x0008	30000	Active High
+	--		0x0000	40000	Active High
+	--		0x0030	Difficulty	Active High
+	--		0x0030	Easy	Active High
+	--		0x0020	Normal	Active High
+	--		0x0010	Hard	Active High
+	--		0x0000	Hardest	Active High
+	--		0x0040	1 per Life	Active High
+	--		0x0000	1 per Game	Active High
+	--		0x0080	Demo_Sounds	Active High
+	--		0x0080	Off	Active High
+	--		0x0000	On	Active High
+	--	0x8180	1	Mirror, Read Port	0x000f, IN0 (/* IN0 I/O: Coin slots, service, 1P/2P buttons */)
+	--	0x81A0	1	Mirror, Read Port	0x000f, IN1 (/* IN1: Player 1 I/O */)
+	--		0x0010	Joystickright Left	Active Low
+	--		0x0020	Joystickright Right	Active Low
+	--		0x0040	P1 Flash Bomb	Active Low
+	--	0x81C0	1	Mirror, Read Port	0x000f, IN2 (/* IN2: Player 2 I/O */)
+	--		0x0010	Joystickright Left	Active Low
+	--		0x0020	Joystickright Right	Active Low
+	--		0x0040	Button 2	Active Low
+	--	0x81E0	1	Mirror, Read Port	0x000f, DSW1 (/* DSW1 (inverted bits) */)
+	--	0x8200	1	Mirror, Read NOP, Write	0x00f8, , irq_enable_w
+	--	0x8202-0x8203	2	Mirror, Write	0x00f8, tutankhm_coin_counter_w
+	--	0x8204	1	Mirror, Write NOP	0x00f8, (// starfield?)
+	--	0x8205	1	Mirror, Write	0x00f8, sound_mute_w
+	--	0x8206	1	Mirror, Write	0x00f8, tutankhm_flip_screen_x_w
+	--	0x8207	1	Mirror, Write	0x00f8, tutankhm_flip_screen_y_w
+	--	0x8300	1	Mirror, Write	0x00ff, tutankhm_bankselect_w
+	--	0x8600	1	Mirror, Device Write	0x00ff, timeplt_audio, timeplt_audio_device, sh_irqtrigger_w
+	--	0x8700	1	Mirror, Device Write	0x00ff, soundlatch, generic_latch_8_device, write
+	--	0x8800-0x8FFF	2048	RAM	
+	--	0x9000-0x9FFF	4096	ROM Bank	bank1
+	--	0xA000-0xFFFF	24576	ROM
+	
 	
 	-- $0000 - $7FFF : direct video RAM access 
 	Video_RAM : work.dpram generic map (nGenRamADDrWidthVideo, nGenRamDataWidth)
@@ -340,7 +332,8 @@ end generate;
 	--		This allows the game to quickly clear the sprites from the screen
 	--		TODO: Does bit 1 of the source address mean something?
 	--          We have to mask it off otherwise the "Juno First" logo on the title screen is wrong
-	
+
+lite_label2 : if JUNO_FIRST generate	
 	process(i_Clk)
 		-- variable x : std_logic_vector(7 downto 0) := X"00";
 	begin
@@ -349,11 +342,13 @@ end generate;
 			
 		end if;
 	end process;
+end generate;
 		
 	----------------------------------------------------------------------------------------------------------
 	-- Main Processor i/o control
 	----------------------------------------------------------------------------------------------------------
 	
+lite_label3 : if JUNO_FIRST generate	
 	-- mux cpu in data between roms/io/wram
 	cpu_di <=
 		dip_1 when cpu_addr = X"8010" else
@@ -366,13 +361,6 @@ end generate;
 		prom_buses(0) when cpu_addr(15 downto 12) = X"A" else
 		cpu_wram_do   when cpu_addr(15 downto 12) = X"8" else video_wram_do;
 		
-	-- assign cpu in/out data addresses	
-	cpu_rom_addr  <= cpu_addr(11 downto 0) when cpu_addr(15 downto 12) >= X"A" else X"000";
-	cpu_wram_addr <= cpu_addr(11 downto 0) when (cpu_addr(15 downto 12) = X"8") else X"000";
-	cpu_wram_we   <= cpu_we when (cpu_addr(15 downto 12) = X"8") else '0';
-	video_wram_addr <= cpu_addr(14 downto 0) when (cpu_addr(15 downto 12) < X"8") else "000" & X"000";
-	video_wram_we <= cpu_we when (cpu_addr(15 downto 12) < X"8") else '0';
-	
 	-- machine data
 	int_control <= cpu_do(0) when cpu_addr = X"8030" and cpu_we = '1' else '0';
 	flip_screen_x <= cpu_do(0) when cpu_addr = X"8034" and cpu_we = '1' else '0';
@@ -383,6 +371,41 @@ end generate;
 	blit_dst_data(15 downto 8) <= cpu_do when cpu_addr = X"8072" and cpu_we = '1' else X"00";
 	blit_dst_data( 7 downto 0) <= cpu_do when cpu_addr = X"8073" and cpu_we = '1' else X"00";
 	blit_trigger <= '0' when blit_ackn = '1' else '1' when cpu_addr = X"8073" and cpu_we = '1' else '0';
+end generate;
+
+-- lite_label4 : if TUTANKHAM generate
+	-- mux cpu in data between roms/io/wram
+	cpu_di <=
+		prom_buses(14) when cpu_addr(15 downto 12) = X"9" and mem_bank_select(3 downto 0) = X"8" else
+		prom_buses(13) when cpu_addr(15 downto 12) = X"9" and mem_bank_select(3 downto 0) = X"7" else
+		prom_buses(12) when cpu_addr(15 downto 12) = X"9" and mem_bank_select(3 downto 0) = X"6" else
+		prom_buses(11) when cpu_addr(15 downto 12) = X"9" and mem_bank_select(3 downto 0) = X"5" else
+		prom_buses(10) when cpu_addr(15 downto 12) = X"9" and mem_bank_select(3 downto 0) = X"4" else
+		prom_buses(9) when cpu_addr(15 downto 12) = X"9" and mem_bank_select(3 downto 0) = X"3" else
+		prom_buses(8) when cpu_addr(15 downto 12) = X"9" and mem_bank_select(3 downto 0) = X"2" else
+		prom_buses(7) when cpu_addr(15 downto 12) = X"9" and mem_bank_select(3 downto 0) = X"1" else
+		prom_buses(6) when cpu_addr(15 downto 12) = X"9" and mem_bank_select(3 downto 0) = X"0" else
+		prom_buses(5) when cpu_addr(15 downto 12) = X"F" else
+		prom_buses(4) when cpu_addr(15 downto 12) = X"E" else
+		prom_buses(3) when cpu_addr(15 downto 12) = X"D" else
+		prom_buses(2) when cpu_addr(15 downto 12) = X"C" else
+		prom_buses(1) when cpu_addr(15 downto 12) = X"B" else
+		prom_buses(0) when cpu_addr(15 downto 12) = X"A" else
+		cpu_wram_do   when cpu_addr(15 downto 12) = X"8" else video_wram_do;
+		
+	-- machine data
+	int_control <= cpu_do(0) when cpu_addr = X"8200" and cpu_we = '1' else '0';
+	flip_screen_x <= cpu_do(0) when cpu_addr = X"8206" and cpu_we = '1' else '0';
+	flip_screen_y <= cpu_do(0) when cpu_addr = X"8207" and cpu_we = '1' else '0';	
+	mem_bank_select <= cpu_do when cpu_addr = X"8300" and cpu_we = '1' else X"00";
+-- end generate;
+		
+	-- assign cpu in/out data addresses	
+	cpu_rom_addr  <= cpu_addr(11 downto 0) when cpu_addr(15 downto 12) >= X"9" else X"000";
+	cpu_wram_addr <= cpu_addr(11 downto 0) when (cpu_addr(15 downto 12) = X"8") else X"000";
+	cpu_wram_we   <= cpu_we when (cpu_addr(15 downto 12) = X"8") else '0';
+	video_wram_addr <= cpu_addr(14 downto 0) when (cpu_addr(15 downto 12) < X"8") else "000" & X"000";
+	video_wram_we <= cpu_we when (cpu_addr(15 downto 12) < X"8") else '0';
 	
 	----------------------------------------------------------------------------------------------------------
 	-- Video update
@@ -434,7 +457,7 @@ end generate;
 					v_porch := X"00";
 					
 					-- cpu irq by vertical sync ?
-					if (lock_cpu = '0') then
+					if (lock_cpu = '0') then -- and (int_control = '1') then
 						cpu_irq <= '0';
 					end if;
 					
