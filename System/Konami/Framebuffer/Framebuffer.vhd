@@ -41,9 +41,9 @@ port
 	o_RegData_cpu  : out std_logic_vector(111 downto 0);
 	o_Debug_cpu : out std_logic_vector(15 downto 0);
 	
-	o_VGA_R4 : out std_logic_vector(3 downto 0); -- Red Color 4Bits
-	o_VGA_G4 : out std_logic_vector(3 downto 0); -- Green Color 4Bits
-	o_VGA_B4 : out std_logic_vector(3 downto 0)  -- Blue Color 4Bits
+	o_VGA_R3 : out std_logic_vector(2 downto 0); -- Red Color 4Bits
+	o_VGA_G3 : out std_logic_vector(2 downto 0); -- Green Color 4Bits
+	o_VGA_B2 : out std_logic_vector(1 downto 0)  -- Blue Color 4Bits
       
 );
 end Framebuffer;
@@ -120,9 +120,8 @@ architecture System of Framebuffer is
 	signal video_pixel		    : std_logic_vector( 7 downto 0);
 	signal video_pixel_shift    : std_logic;
 	signal video_pixel_palette  : std_logic_vector( 3 downto 0);
-	type PALETTE is array (15 downto 0) of std_logic_vector(11 downto 0);
-	constant video_palette : PALETTE := (X"F0F",X"AA5",X"0F5",X"555",X"91F",X"F91",X"A09",X"19A",X"89F",X"AFF",X"00F",X"F00",X"80F",X"AF0",X"0AF",X"F0A");
-	
+	type PALETTE is array (15 downto 0) of std_logic_vector(7 downto 0);
+	signal video_palette : PALETTE := (X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00");
 	
 	-- PROM buses
 	type   prom_buses_array is array (0 to 27) of std_logic_vector(7 downto 0);
@@ -411,10 +410,25 @@ end generate;
 	-- Video update
 	----------------------------------------------------------------------------------------------------------
 	
-	-- TODO !! FLIP X/Y
+	-- set video palette ($8000-$800f)
+	video_palette(0) <= cpu_do when cpu_addr = X"8000";
+	video_palette(1) <= cpu_do when cpu_addr = X"8001";
+	video_palette(2) <= cpu_do when cpu_addr = X"8002";
+	video_palette(3) <= cpu_do when cpu_addr = X"8003";
+	video_palette(4) <= cpu_do when cpu_addr = X"8004";
+	video_palette(5) <= cpu_do when cpu_addr = X"8005";
+	video_palette(6) <= cpu_do when cpu_addr = X"8006";
+	video_palette(7) <= cpu_do when cpu_addr = X"8007";
+	video_palette(8) <= cpu_do when cpu_addr = X"8008";
+	video_palette(9) <= cpu_do when cpu_addr = X"8009";
+	video_palette(10) <= cpu_do when cpu_addr = X"800a";
+	video_palette(11) <= cpu_do when cpu_addr = X"800b";
+	video_palette(12) <= cpu_do when cpu_addr = X"800c";
+	video_palette(13) <= cpu_do when cpu_addr = X"800d";
+	video_palette(14) <= cpu_do when cpu_addr = X"800e";
+	video_palette(15) <= cpu_do when cpu_addr = X"800f";
 	
-	-- vrambyte = m_videoram[effy * 128 + effx / 2];
-	
+	-- video ram scan
 	process(i_Clk)
 		variable video_h_counter : std_logic_vector(7 downto 0) := X"FF";
 		variable video_v_counter : std_logic_vector(7 downto 0) := X"FF";
@@ -475,6 +489,7 @@ end generate;
 		
 			end if;
 			
+			-- set current video read address .. TODO !! FLIP X/Y
 			video_addr_output <= video_h_counter(7 downto 0) & (not video_v_counter(7 downto 1));
 			video_pixel_shift <= not video_v_counter(0);
 			
@@ -483,9 +498,9 @@ end generate;
 	
 	-- pixel output
 	video_pixel_palette <= video_pixel(7 downto 4) when (video_pixel_shift = '1') else video_pixel(3 downto 0);
-	o_VGA_R4 <= video_palette(to_integer(unsigned(video_pixel_palette)))(11 downto 8); -- video_pixel(7 downto 4);
-	o_VGA_G4 <= video_palette(to_integer(unsigned(video_pixel_palette)))( 7 downto 4); -- video_pixel(7 downto 4);
-	o_VGA_B4 <= video_palette(to_integer(unsigned(video_pixel_palette)))( 3 downto 0); -- video_pixel(3 downto 0);
+	o_VGA_R3 <= video_palette(to_integer(unsigned(video_pixel_palette)))(2 downto 0);
+	o_VGA_G3 <= video_palette(to_integer(unsigned(video_pixel_palette)))(5 downto 3);
+	o_VGA_B2 <= video_palette(to_integer(unsigned(video_pixel_palette)))(7 downto 6);
 	
 
 end System;

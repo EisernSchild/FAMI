@@ -278,7 +278,8 @@ architecture basic of emu is
 	signal Clk_0921K : std_logic;
 	
 	-- video
-	signal VGA_R4, VGA_G4, VGA_B4 : std_logic_vector(3 downto 0);
+	signal VGA_R3, VGA_G3 : std_logic_vector(2 downto 0);
+	signal VGA_B2 : std_logic_vector(1 downto 0);
 	signal HS_CORE, VS_CORE, Cs_CORE : std_logic;
 	signal HS, VS, DE : std_logic;
 	
@@ -386,9 +387,9 @@ begin
 		clk => Clk_6144K,                
 		reset_n => '1',--(not reset),
 
-		VGA_R4 => VGA_R4,
-		VGA_G4 => VGA_G4,
-		VGA_B4 => VGA_B4,
+		VGA_R4 => VGA_R3 & VGA_R3(2),
+		VGA_G4 => VGA_G3 & VGA_G3(2),
+		VGA_B4 => VGA_B2 & VGA_B2,
 		
 		DEBUG_OUT0 => RegData_cpu(111 downto 48),
 		DEBUG_OUT1 => RegData_cpu(47 downto 0) & Debug_cpu,
@@ -419,9 +420,9 @@ begin
 		o_RegData_cpu => RegData_cpu,
 		o_Debug_cpu => Debug_cpu,
 		
-		o_VGA_R4 => VGA_R4, -- Red Color 4Bits
-		o_VGA_G4 => VGA_G4, -- Green Color 4Bits
-		o_VGA_B4 => VGA_B4  -- Blue Color 4Bits
+		o_VGA_R3 => VGA_R3, -- Red Color 3Bits
+		o_VGA_G3 => VGA_G3, -- Green Color 3Bits
+		o_VGA_B2 => VGA_B2  -- Blue Color 2Bits
 	);
 
 end basic;
