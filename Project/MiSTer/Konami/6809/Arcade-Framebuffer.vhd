@@ -275,7 +275,7 @@ architecture basic of emu is
 	signal clock_locked : std_logic;
 	signal Clk_6144K : std_logic;
 	signal Clk_12M : std_logic;
-	signal Clk_0921K : std_logic;
+	signal Clk_1536K : std_logic;
 	
 	-- video
 	signal VGA_R3, VGA_G3 : std_logic_vector(2 downto 0);
@@ -305,7 +305,7 @@ begin
 -- assigning video streching, pixel enabled and clock
 	VIDEO_ARX <= x"10";-- when (status(8) = '1') else x"04";
 	VIDEO_ARY <= x"09";-- when (status(8) = '1') else x"03";
-	CLK_VIDEO <= Clk_6144K;
+	CLK_VIDEO <= Clk_1536K;
 -- CE_PIXEL <= '1';
 	VGA_HS <= HS;
 	VGA_VS <= VS;
@@ -376,7 +376,7 @@ begin
 		rst      => '0',
 		outclk_0 => Clk_6144K,
 		outclk_1 => Clk_12M,
-		outclk_2 => Clk_0921K,
+		outclk_2 => Clk_1536K,
 		locked   => clock_locked
 	);
 	
@@ -384,7 +384,7 @@ begin
 	video1 : video
 	port map
 	(                                    
-		clk => Clk_6144K,                
+		clk => Clk_1536K,                
 		reset_n => '1',--(not reset),
 
 		VGA_R4 => VGA_R3 & VGA_R3(2),
@@ -414,7 +414,8 @@ begin
 	-- System Framebuffer
 	System_Framebuffer : entity work.Framebuffer
 	port map(	
-		i_Clk		   => Clk_6144K,    -- clock 1.536 Mhz
+		i_Clk_6144K => Clk_6144K,    -- clock 6.144 Mhz
+		i_Clk_1536K => Clk_1536K,    -- clock 1.536 Mhz
 		i_Reset     =>	RESET,        -- reset when 1
 		
 		o_RegData_cpu => RegData_cpu,

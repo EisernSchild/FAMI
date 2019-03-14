@@ -35,7 +35,8 @@ generic
 );
 port
 (
-	i_Clk       : in std_logic; -- input clock  1.53 Mhz
+	i_Clk_6144K : in std_logic; -- input clock  6.14 Mhz
+	i_Clk_1536K : in std_logic; -- input clock  1.53 Mhz
 	i_Reset     : in std_logic; -- reset when 1
 	
 	o_RegData_cpu  : out std_logic_vector(111 downto 0);
@@ -163,7 +164,7 @@ lite_label1 : if LITE_BUILD generate
 		nIRQ     => cpu_irq,     -- interrupt request
 		nFIRQ    => '1',         -- fast interrupt request
 		nNMI     => '1',         -- non-maskable interrupt
-		EXTAL    => i_Clk,       -- input oscillator
+		EXTAL    => i_Clk_6144K, -- input oscillator
 		XTAL     => '0',         -- input oscillator
 		nHALT    => '1',         -- not halt - causes the MPU to stop running
 		nRESET   => not i_Reset, -- not reset
@@ -274,7 +275,7 @@ end generate;
 		data_a    => cpu_do,
 		q_a       => video_wram_do,
 
-		clock_b   => i_Clk,
+		clock_b   => i_Clk_1536K,
 		address_b => video_addr_output,
 		q_b       => video_pixel
 	);
@@ -333,10 +334,10 @@ end generate;
 	--          We have to mask it off otherwise the "Juno First" logo on the title screen is wrong
 
 lite_label2 : if JUNO_FIRST generate	
-	process(i_Clk)
+	process(i_Clk_6144K)
 		-- variable x : std_logic_vector(7 downto 0) := X"00";
 	begin
-		if rising_edge(i_Clk) then
+		if rising_edge(i_Clk_6144K) then
 			
 			
 		end if;
@@ -361,10 +362,10 @@ lite_label3 : if JUNO_FIRST generate
 		cpu_wram_do   when cpu_addr(15 downto 12) = X"8" else video_wram_do;
 		
 	-- machine data
-	int_control <= cpu_do(0) when cpu_addr = X"8030" and cpu_we = '1' else '0';
-	flip_screen_x <= cpu_do(0) when cpu_addr = X"8034" and cpu_we = '1' else '0';
-	flip_screen_y <= cpu_do(0) when cpu_addr = X"8035" and cpu_we = '1' else '0';
-	mem_bank_select <= cpu_do when cpu_addr = X"8060" and cpu_we = '1' else X"00";
+	int_control <= cpu_do(0) when cpu_addr = X"8030" and cpu_we = '1';
+	flip_screen_x <= cpu_do(0) when cpu_addr = X"8034" and cpu_we = '1';
+	flip_screen_y <= cpu_do(0) when cpu_addr = X"8035" and cpu_we = '1';
+	mem_bank_select <= cpu_do when cpu_addr = X"8060" and cpu_we = '1';
 	blit_src_data(15 downto 8) <= cpu_do when cpu_addr = X"8070" and cpu_we = '1' else X"00";
 	blit_src_data( 7 downto 0) <= cpu_do when cpu_addr = X"8071" and cpu_we = '1' else X"00";
 	blit_dst_data(15 downto 8) <= cpu_do when cpu_addr = X"8072" and cpu_we = '1' else X"00";
@@ -393,10 +394,10 @@ end generate;
 		cpu_wram_do   when cpu_addr(15 downto 12) = X"8" else video_wram_do;
 		
 	-- machine data
-	int_control <= cpu_do(0) when cpu_addr = X"8200" and cpu_we = '1' else '0';
-	flip_screen_x <= cpu_do(0) when cpu_addr = X"8206" and cpu_we = '1' else '0';
-	flip_screen_y <= cpu_do(0) when cpu_addr = X"8207" and cpu_we = '1' else '0';	
-	mem_bank_select <= cpu_do when cpu_addr = X"8300" and cpu_we = '1' else X"00";
+	int_control <= cpu_do(0) when cpu_addr = X"8200" and cpu_we = '1';
+	flip_screen_x <= cpu_do(0) when cpu_addr = X"8206" and cpu_we = '1';
+	flip_screen_y <= cpu_do(0) when cpu_addr = X"8207" and cpu_we = '1';	
+	mem_bank_select <= cpu_do when cpu_addr = X"8300" and cpu_we = '1';
 -- end generate;
 		
 	-- assign cpu in/out data addresses	
@@ -429,14 +430,15 @@ end generate;
 	video_palette(15) <= cpu_do when cpu_addr = X"800f";
 	
 	-- video ram scan
-	process(i_Clk)
+	process(i_Clk_1536K)
 		variable video_h_counter : std_logic_vector(7 downto 0) := X"FF";
 		variable video_v_counter : std_logic_vector(7 downto 0) := X"FF";
 		variable h_porch : std_logic_vector(7 downto 0) := X"08"; -- set to front porch
 		variable v_porch : std_logic_vector(7 downto 0) := X"08"; -- set to front porch
 		variable lock_cpu : std_logic := '0';
+		variable frame_skip : std_logic := '0';
 	begin
-		if rising_edge(i_Clk) then
+		if rising_edge(i_Clk_1536K) then
 			-- cpu bus ?
 			if (cpu_bs = '1') and (cpu_ba = '0') then lock_cpu := '1'; cpu_irq <= '1'; else lock_cpu:='0'; end if;
 			
@@ -471,8 +473,11 @@ end generate;
 					v_porch := X"00";
 					
 					-- cpu irq by vertical sync ?
-					if (lock_cpu = '0') then -- and (int_control = '1') then
+					if (lock_cpu = '0') and (frame_skip = '0') then -- and (int_control = '1') then
 						cpu_irq <= '0';
+						frame_skip := '1';
+					else
+						frame_skip := '0';
 					end if;
 					
 				elsif (v_porch = X"00") then
