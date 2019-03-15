@@ -137,6 +137,7 @@ architecture System of Framebuffer is
 	signal video_pixel_palette  : std_logic_vector( 3 downto 0);
 	type PALETTE is array (15 downto 0) of std_logic_vector(7 downto 0);
 	signal video_palette : PALETTE := (X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00");
+	signal video_scroll		    : std_logic_vector( 7 downto 0);
 	
 	-- PROM buses
 	type   prom_buses_array is array (0 to 27) of std_logic_vector(7 downto 0);
@@ -432,27 +433,31 @@ end generate;
 	----------------------------------------------------------------------------------------------------------
 	
 	-- set video palette ($8000-$800f)
-	video_palette(0) <= cpu_do when cpu_addr = X"8000";
-	video_palette(1) <= cpu_do when cpu_addr = X"8001";
-	video_palette(2) <= cpu_do when cpu_addr = X"8002";
-	video_palette(3) <= cpu_do when cpu_addr = X"8003";
-	video_palette(4) <= cpu_do when cpu_addr = X"8004";
-	video_palette(5) <= cpu_do when cpu_addr = X"8005";
-	video_palette(6) <= cpu_do when cpu_addr = X"8006";
-	video_palette(7) <= cpu_do when cpu_addr = X"8007";
-	video_palette(8) <= cpu_do when cpu_addr = X"8008";
-	video_palette(9) <= cpu_do when cpu_addr = X"8009";
-	video_palette(10) <= cpu_do when cpu_addr = X"800a";
-	video_palette(11) <= cpu_do when cpu_addr = X"800b";
-	video_palette(12) <= cpu_do when cpu_addr = X"800c";
-	video_palette(13) <= cpu_do when cpu_addr = X"800d";
-	video_palette(14) <= cpu_do when cpu_addr = X"800e";
-	video_palette(15) <= cpu_do when cpu_addr = X"800f";
+	video_palette(0) <= cpu_do when cpu_addr = X"8000" and cpu_we = '1';
+	video_palette(1) <= cpu_do when cpu_addr = X"8001" and cpu_we = '1';
+	video_palette(2) <= cpu_do when cpu_addr = X"8002" and cpu_we = '1';
+	video_palette(3) <= cpu_do when cpu_addr = X"8003" and cpu_we = '1';
+	video_palette(4) <= cpu_do when cpu_addr = X"8004" and cpu_we = '1';
+	video_palette(5) <= cpu_do when cpu_addr = X"8005" and cpu_we = '1';
+	video_palette(6) <= cpu_do when cpu_addr = X"8006" and cpu_we = '1';
+	video_palette(7) <= cpu_do when cpu_addr = X"8007" and cpu_we = '1';
+	video_palette(8) <= cpu_do when cpu_addr = X"8008" and cpu_we = '1';
+	video_palette(9) <= cpu_do when cpu_addr = X"8009" and cpu_we = '1';
+	video_palette(10) <= cpu_do when cpu_addr = X"800a" and cpu_we = '1';
+	video_palette(11) <= cpu_do when cpu_addr = X"800b" and cpu_we = '1';
+	video_palette(12) <= cpu_do when cpu_addr = X"800c" and cpu_we = '1';
+	video_palette(13) <= cpu_do when cpu_addr = X"800d" and cpu_we = '1';
+	video_palette(14) <= cpu_do when cpu_addr = X"800e" and cpu_we = '1';
+	video_palette(15) <= cpu_do when cpu_addr = X"800f" and cpu_we = '1';
+	
+	-- scrolling
+	video_scroll <= cpu_do when cpu_addr = X"8100" and cpu_we = '1';
 	
 	-- video ram scan
 	process(i_Clk_6144K)
 		variable video_h_counter : std_logic_vector(7 downto 0) := X"FF";
 		variable video_v_counter : std_logic_vector(7 downto 0) := X"FF";
+		variable video_h_scroll  : std_logic_vector(7 downto 0) := X"00";
 		variable h_porch : std_logic_vector(7 downto 0) := X"08"; -- set to front porch
 		variable v_porch : std_logic_vector(7 downto 0) := X"08"; -- set to front porch
 		variable lock_cpu : std_logic := '0';
@@ -461,6 +466,19 @@ end generate;
 		if rising_edge(i_Clk_6144K) then
 			-- cpu bus ?
 			if (cpu_bs = '1') and (cpu_ba = '0') then lock_cpu := '1'; cpu_irq <= '1'; else lock_cpu:='0'; end if;
+			
+			-- irq ?
+			if (h_porch = X"00") and (v_porch = X"00") and (video_v_counter = X"00") and (video_h_counter = X"00") then
+					
+					-- cpu irq by vertical sync ?
+					if (lock_cpu = '0') and (frame_skip = '0') then -- and (int_control = '1') then
+						cpu_irq <= '0';
+						frame_skip := '1';
+					else
+						frame_skip := '0';
+					end if;
+			end if;
+					
 			
 			-- horizontal sync
 			if (video_h_counter = X"FF") then
@@ -492,16 +510,6 @@ end generate;
 					video_v_counter := X"00";
 					v_porch := X"00";
 					
-				-- elsif (v_porch = X"01") then
-					
-					-- cpu irq by vertical sync ?
-					if (lock_cpu = '0') and (frame_skip = '0') then -- and (int_control = '1') then
-						cpu_irq <= '0';
-						frame_skip := '1';
-					else
-						frame_skip := '0';
-					end if;
-					
 				elsif (v_porch = X"00") then
 			
 					-- set horizontal counter
@@ -517,7 +525,9 @@ end generate;
 			end if;
 			
 			-- set current video read address .. TODO !! FLIP X/Y
-			video_addr_output <= video_h_counter(7 downto 0) & (not video_v_counter(7 downto 1));
+			video_h_scroll := (video_scroll + video_h_counter);
+			if (video_v_counter <= X"40") then video_addr_output(14 downto 7) <= video_h_counter; else video_addr_output(14 downto 7) <= video_h_scroll; end if;
+			video_addr_output( 6 downto 0) <= (not video_v_counter(7 downto 1));
 			video_pixel_shift <= not video_v_counter(0);
 			
 		end if; 
