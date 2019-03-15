@@ -106,8 +106,9 @@ architecture basic of emu is
 		"ROM;;" &
 		"-;" &
 		"FS,ROM;" &
+		"-;" &
+		"J,Fire 1,Fire 2,Fire 3,Start 1P,Start 2P;" &
 		"-;";
-		
 --	"O1,Aspect Ratio,Original,Wide;",
 --	"O2,Orientation,Vert,Horz;",
 --	"O34,Scanlines(vert),No,25%,50%,75%;",
@@ -252,6 +253,7 @@ architecture basic of emu is
 -- data fields
 	signal joyA : std_logic_vector(15 downto 0);
 	signal joyB : std_logic_vector(15 downto 0);
+	signal joyAB : std_logic_vector(15 downto 0);
 	signal buttons : std_logic_vector(1 downto 0);
 	--
 	signal forced_scandoubler : std_logic;
@@ -273,9 +275,9 @@ architecture basic of emu is
 
 	-- clocks  
 	signal clock_locked : std_logic;
+	signal Clk_18432K : std_logic;
+	signal Clk : std_logic;
 	signal Clk_6144K : std_logic;
-	signal Clk_12M : std_logic;
-	signal Clk_1536K : std_logic;
 	
 	-- video
 	signal VGA_R3, VGA_G3 : std_logic_vector(2 downto 0);
@@ -305,13 +307,10 @@ begin
 -- assigning video streching, pixel enabled and clock
 	VIDEO_ARX <= x"10";-- when (status(8) = '1') else x"04";
 	VIDEO_ARY <= x"09";-- when (status(8) = '1') else x"03";
-	CLK_VIDEO <= Clk_1536K;
--- CE_PIXEL <= '1';
+	CLK_VIDEO <= Clk_6144K;
 	VGA_HS <= HS;
 	VGA_VS <= VS;
 	VGA_DE <= DE;
---	VGA_HS <= not HS;
---	VGA_VS <= not VS;
 	
 -- assigning DDRAM (zero)
 	DDRAM_CLK      <= '0';
@@ -327,11 +326,14 @@ begin
 	SD_MOSI        <= 'Z';
 	SD_CS          <= 'Z';
 	
+-- assigning joy a+b
+	joyAB <= joyA or joyB;
+	
 -- sys/hps_io implementation (User io)
 	hps : hps_io
 	generic map (STRLEN => (CONF_STR'length) + (CONF_STR2'length) + (CONF_STR3'length) + (CONF_STR4'length))
 	port map (
-		clk_sys => Clk_12M,
+		clk_sys => Clk,
 		HPS_BUS => HPS_BUS,
 		conf_str => to_slv(CONF_STR & CONF_STR2 & CONF_STR3 & CONF_STR4),
 	
@@ -374,9 +376,9 @@ begin
 	port map(
 		refclk   => CLK_50M,
 		rst      => '0',
-		outclk_0 => Clk_6144K,
-		outclk_1 => Clk_12M,
-		outclk_2 => Clk_1536K,
+		outclk_0 => Clk_18432K,
+		outclk_1 => Clk,
+		outclk_2 => Clk_6144K,
 		locked   => clock_locked
 	);
 	
@@ -384,7 +386,7 @@ begin
 	video1 : video
 	port map
 	(                                    
-		clk => Clk_1536K,                
+		clk => Clk_6144K,                
 		reset_n => '1',--(not reset),
 
 		VGA_R4 => VGA_R3 & VGA_R3(2),
@@ -414,9 +416,21 @@ begin
 	-- System Framebuffer
 	System_Framebuffer : entity work.Framebuffer
 	port map(	
-		i_Clk_6144K => Clk_6144K,    -- clock 6.144 Mhz
-		i_Clk_1536K => Clk_1536K,    -- clock 1.536 Mhz
+		i_Clk_18432K => Clk_18432K,    -- clock 6.144 Mhz
+		i_Clk_6144K => Clk_6144K,    -- clock 1.536 Mhz
 		i_Reset     =>	RESET,        -- reset when 1
+		
+		i_btn_flash_bomb => joyAB(5),
+		i_btn_fire_left  => joyAB(4),
+		i_btn_fire_right => joyAB(6),
+		i_btn_down       => joyAB(2),
+		i_btn_up         => joyAB(3),
+		i_btn_left       => joyAB(1),
+		i_btn_right      => joyAB(0),
+		
+		i_btn_left_coin   => joyAB(7) or joyAB(8),
+		i_btn_one_player  => joyAB(7),
+		i_btn_two_players => joyAB(8),
 		
 		o_RegData_cpu => RegData_cpu,
 		o_Debug_cpu => Debug_cpu,

@@ -35,9 +35,21 @@ generic
 );
 port
 (
-	i_Clk_6144K : in std_logic; -- input clock  6.14 Mhz
-	i_Clk_1536K : in std_logic; -- input clock  1.53 Mhz
-	i_Reset     : in std_logic; -- reset when 1
+	i_Clk_18432K : in std_logic; -- input clock 18.43 Mhz
+	i_Clk_6144K  : in std_logic; -- input clock  6.14 Mhz
+	i_Reset      : in std_logic; -- reset when 1
+	
+	i_btn_flash_bomb : in std_logic;
+	i_btn_fire_left  : in std_logic;
+	i_btn_fire_right : in std_logic;
+	i_btn_down       : in std_logic;
+	i_btn_up         : in std_logic;
+	i_btn_left       : in std_logic;
+	i_btn_right      : in std_logic;
+	
+	i_btn_left_coin  : in std_logic;
+	i_btn_one_player : in std_logic;
+	i_btn_two_players: in std_logic;
 	
 	o_RegData_cpu  : out std_logic_vector(111 downto 0);
 	o_Debug_cpu : out std_logic_vector(15 downto 0);
@@ -112,9 +124,11 @@ architecture System of Framebuffer is
 	signal blit_trigger : std_logic;
 	signal blit_ackn : std_logic;
 	
-	-- dip switches
-	signal dip_1 : std_logic_vector(7 downto 0) := X"00";
-	signal dip_2 : std_logic_vector(7 downto 0) := X"00";
+	-- dip switches + input
+	signal dip_1   : std_logic_vector(7 downto 0) := X"00";
+	signal dip_2   : std_logic_vector(7 downto 0) := X"00";
+	signal input_1 : std_logic_vector(7 downto 0) := X"FF";
+	signal input_2 : std_logic_vector(7 downto 0) := X"FF";
 	
 	-- Video control signals
 	signal video_addr_output    : std_logic_vector(14 downto 0);
@@ -164,7 +178,7 @@ lite_label1 : if LITE_BUILD generate
 		nIRQ     => cpu_irq,     -- interrupt request
 		nFIRQ    => '1',         -- fast interrupt request
 		nNMI     => '1',         -- non-maskable interrupt
-		EXTAL    => i_Clk_6144K, -- input oscillator
+		EXTAL    => i_Clk_18432K, -- input oscillator
 		XTAL     => '0',         -- input oscillator
 		nHALT    => '1',         -- not halt - causes the MPU to stop running
 		nRESET   => not i_Reset, -- not reset
@@ -275,7 +289,7 @@ end generate;
 		data_a    => cpu_do,
 		q_a       => video_wram_do,
 
-		clock_b   => i_Clk_1536K,
+		clock_b   => i_Clk_6144K,
 		address_b => video_addr_output,
 		q_b       => video_pixel
 	);
@@ -334,10 +348,10 @@ end generate;
 	--          We have to mask it off otherwise the "Juno First" logo on the title screen is wrong
 
 lite_label2 : if JUNO_FIRST generate	
-	process(i_Clk_6144K)
+	process(i_Clk_18432K)
 		-- variable x : std_logic_vector(7 downto 0) := X"00";
 	begin
-		if rising_edge(i_Clk_6144K) then
+		if rising_edge(i_Clk_18432K) then
 			
 			
 		end if;
@@ -376,6 +390,8 @@ end generate;
 -- lite_label4 : if TUTANKHAM generate
 	-- mux cpu in data between roms/io/wram
 	cpu_di <=
+		input_1 when cpu_addr = X"81A0" else
+		input_2 when cpu_addr = X"8180" else
 		prom_buses(14) when cpu_addr(15 downto 12) = X"9" and mem_bank_select(3 downto 0) = X"8" else
 		prom_buses(13) when cpu_addr(15 downto 12) = X"9" and mem_bank_select(3 downto 0) = X"7" else
 		prom_buses(12) when cpu_addr(15 downto 12) = X"9" and mem_bank_select(3 downto 0) = X"6" else
@@ -398,6 +414,10 @@ end generate;
 	flip_screen_x <= cpu_do(0) when cpu_addr = X"8206" and cpu_we = '1';
 	flip_screen_y <= cpu_do(0) when cpu_addr = X"8207" and cpu_we = '1';	
 	mem_bank_select <= cpu_do when cpu_addr = X"8300" and cpu_we = '1';
+	
+	-- input
+	input_1 <= '1' & not i_btn_flash_bomb & not i_btn_fire_right & not i_btn_fire_left & not i_btn_down & not i_btn_up & not i_btn_right & not i_btn_left;
+	input_2 <= '1' & '1' & '1' & i_btn_two_players & i_btn_one_player & '1' & i_btn_left_coin & '1';
 -- end generate;
 		
 	-- assign cpu in/out data addresses	
@@ -430,7 +450,7 @@ end generate;
 	video_palette(15) <= cpu_do when cpu_addr = X"800f";
 	
 	-- video ram scan
-	process(i_Clk_1536K)
+	process(i_Clk_6144K)
 		variable video_h_counter : std_logic_vector(7 downto 0) := X"FF";
 		variable video_v_counter : std_logic_vector(7 downto 0) := X"FF";
 		variable h_porch : std_logic_vector(7 downto 0) := X"08"; -- set to front porch
@@ -438,7 +458,7 @@ end generate;
 		variable lock_cpu : std_logic := '0';
 		variable frame_skip : std_logic := '0';
 	begin
-		if rising_edge(i_Clk_1536K) then
+		if rising_edge(i_Clk_6144K) then
 			-- cpu bus ?
 			if (cpu_bs = '1') and (cpu_ba = '0') then lock_cpu := '1'; cpu_irq <= '1'; else lock_cpu:='0'; end if;
 			
@@ -471,6 +491,8 @@ end generate;
 					-- vertical new screen
 					video_v_counter := X"00";
 					v_porch := X"00";
+					
+				-- elsif (v_porch = X"01") then
 					
 					-- cpu irq by vertical sync ?
 					if (lock_cpu = '0') and (frame_skip = '0') then -- and (int_control = '1') then
