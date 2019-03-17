@@ -149,7 +149,6 @@ architecture basic of emu is
 		rst      : in  std_logic; -- reset
 		outclk_0 : out std_logic; -- clk
 		outclk_1 : out std_logic; -- clk
-		outclk_2 : out std_logic; -- clk
 		locked   : out std_logic  -- export
 	);
 	end component pll;
@@ -295,7 +294,6 @@ architecture basic of emu is
 	-- clocks  
 	signal clock_locked : std_logic;
 	signal Clk_18432K : std_logic;
-	signal Clk : std_logic;
 	signal Clk_6144K : std_logic;
 	
 	-- video
@@ -352,7 +350,7 @@ begin
 	hps : hps_io
 	generic map (STRLEN => (CONF_STR'length) + (CONF_STR2'length) + (CONF_STR3'length) + (CONF_STR4'length))
 	port map (
-		clk_sys => Clk,
+		CLK_SYS => Clk_18432K,
 		HPS_BUS => HPS_BUS,
 		conf_str => to_slv(CONF_STR & CONF_STR2 & CONF_STR3 & CONF_STR4),
 	
@@ -396,8 +394,7 @@ begin
 		refclk   => CLK_50M,
 		rst      => '0',
 		outclk_0 => Clk_18432K,
-		outclk_1 => Clk,
-		outclk_2 => Clk_6144K,
+		outclk_1 => Clk_6144K,
 		locked   => clock_locked
 	);
 	
@@ -435,8 +432,8 @@ begin
 	-- System Framebuffer
 	System_Framebuffer : entity work.Framebuffer
 	port map(	
-		i_Clk_18432K => Clk_18432K,    -- clock 6.144 Mhz
-		i_Clk_6144K => Clk_6144K,    -- clock 1.536 Mhz
+		i_Clk_18432K => Clk_18432K,    -- clock 18.432 Mhz
+		i_Clk_6144K => Clk_6144K,    -- clock 6.144 Mhz
 		i_Reset     =>	RESET,        -- reset when 1
 		
 		i_btn_flash_bomb => joyAB(5),

@@ -433,22 +433,22 @@ end generate;
 	----------------------------------------------------------------------------------------------------------
 	
 	-- set video palette ($8000-$800f)
-	video_palette(0) <= cpu_do when cpu_addr = X"8000" and cpu_we = '1';
-	video_palette(1) <= cpu_do when cpu_addr = X"8001" and cpu_we = '1';
-	video_palette(2) <= cpu_do when cpu_addr = X"8002" and cpu_we = '1';
-	video_palette(3) <= cpu_do when cpu_addr = X"8003" and cpu_we = '1';
-	video_palette(4) <= cpu_do when cpu_addr = X"8004" and cpu_we = '1';
-	video_palette(5) <= cpu_do when cpu_addr = X"8005" and cpu_we = '1';
-	video_palette(6) <= cpu_do when cpu_addr = X"8006" and cpu_we = '1';
-	video_palette(7) <= cpu_do when cpu_addr = X"8007" and cpu_we = '1';
-	video_palette(8) <= cpu_do when cpu_addr = X"8008" and cpu_we = '1';
-	video_palette(9) <= cpu_do when cpu_addr = X"8009" and cpu_we = '1';
-	video_palette(10) <= cpu_do when cpu_addr = X"800a" and cpu_we = '1';
-	video_palette(11) <= cpu_do when cpu_addr = X"800b" and cpu_we = '1';
-	video_palette(12) <= cpu_do when cpu_addr = X"800c" and cpu_we = '1';
-	video_palette(13) <= cpu_do when cpu_addr = X"800d" and cpu_we = '1';
-	video_palette(14) <= cpu_do when cpu_addr = X"800e" and cpu_we = '1';
-	video_palette(15) <= cpu_do when cpu_addr = X"800f" and cpu_we = '1';
+	video_palette(0) <= cpu_do when cpu_addr = X"8000" and cpu_we = '1' and cpu_clock_e = '0';
+	video_palette(1) <= cpu_do when cpu_addr = X"8001" and cpu_we = '1' and cpu_clock_e = '0';
+	video_palette(2) <= cpu_do when cpu_addr = X"8002" and cpu_we = '1' and cpu_clock_e = '0';
+	video_palette(3) <= cpu_do when cpu_addr = X"8003" and cpu_we = '1' and cpu_clock_e = '0';
+	video_palette(4) <= cpu_do when cpu_addr = X"8004" and cpu_we = '1' and cpu_clock_e = '0';
+	video_palette(5) <= cpu_do when cpu_addr = X"8005" and cpu_we = '1' and cpu_clock_e = '0';
+	video_palette(6) <= cpu_do when cpu_addr = X"8006" and cpu_we = '1' and cpu_clock_e = '0';
+	video_palette(7) <= cpu_do when cpu_addr = X"8007" and cpu_we = '1' and cpu_clock_e = '0';
+	video_palette(8) <= cpu_do when cpu_addr = X"8008" and cpu_we = '1' and cpu_clock_e = '0';
+	video_palette(9) <= cpu_do when cpu_addr = X"8009" and cpu_we = '1' and cpu_clock_e = '0';
+	video_palette(10) <= cpu_do when cpu_addr = X"800a" and cpu_we = '1' and cpu_clock_e = '0';
+	video_palette(11) <= cpu_do when cpu_addr = X"800b" and cpu_we = '1' and cpu_clock_e = '0';
+	video_palette(12) <= cpu_do when cpu_addr = X"800c" and cpu_we = '1' and cpu_clock_e = '0';
+	video_palette(13) <= cpu_do when cpu_addr = X"800d" and cpu_we = '1' and cpu_clock_e = '0';
+	video_palette(14) <= cpu_do when cpu_addr = X"800e" and cpu_we = '1' and cpu_clock_e = '0';
+	video_palette(15) <= cpu_do when cpu_addr = X"800f" and cpu_we = '1' and cpu_clock_e = '0';
 	
 	-- scrolling
 	video_scroll <= cpu_do when cpu_addr = X"8100" and cpu_we = '1';
@@ -458,7 +458,7 @@ end generate;
 		variable video_h_counter : std_logic_vector(7 downto 0) := X"FF";
 		variable video_v_counter : std_logic_vector(7 downto 0) := X"FF";
 		variable video_h_scroll  : std_logic_vector(7 downto 0) := X"00";
-		variable h_porch : std_logic_vector(7 downto 0) := X"08"; -- set to front porch
+		variable h_porch : std_logic_vector(7 downto 0) := X"0c"; -- set to front porch
 		variable v_porch : std_logic_vector(7 downto 0) := X"08"; -- set to front porch
 		variable lock_cpu : std_logic := '0';
 		variable frame_skip : std_logic := '0';
@@ -468,7 +468,7 @@ end generate;
 			if (cpu_bs = '1') and (cpu_ba = '0') then lock_cpu := '1'; cpu_irq <= '1'; else lock_cpu:='0'; end if;
 			
 			-- irq ?
-			if (h_porch = X"00") and (v_porch = X"00") and (video_v_counter = X"00") and (video_h_counter = X"00") then
+			if (h_porch = X"00") and (v_porch = X"00") and (video_v_counter = X"FF") and (video_h_counter = X"FF") then
 					
 					-- cpu irq by vertical sync ?
 					if (lock_cpu = '0') and (frame_skip = '0') then -- and (int_control = '1') then
