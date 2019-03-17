@@ -48,7 +48,9 @@ entity emu is port
 	VGA_HS           : out   std_logic; -- positive pulse!
 	VGA_VS           : out   std_logic; -- positive pulse!
 	VGA_DE           : out   std_logic; -- = not (VBlank or HBlank)
-
+	VGA_F1           : out   std_logic;
+	VGA_SL           : out   std_logic_vector(1 downto 0);
+	
 	-- LED
 	LED_USER         : out   std_logic; -- 1 - ON, 0 - OFF.
 
@@ -96,7 +98,24 @@ entity emu is port
 	SDRAM_nCS        : out   std_logic;
 	SDRAM_nCAS       : out   std_logic;
 	SDRAM_nRAS       : out   std_logic;
-	SDRAM_nWE        : out   std_logic
+	SDRAM_nWE        : out   std_logic;
+	
+	UART_CTS         : in    std_logic;
+	UART_RTS         : out   std_logic;
+	UART_RXD         : in    std_logic;
+	UART_TXD         : out   std_logic;
+	UART_DTR         : out   std_logic;
+	UART_DSR         : in    std_logic;
+
+	-- Open-drain User port.
+	-- 0 - D+/RX
+	-- 1 - D-/TX
+	-- 2..5 - USR1..USR4
+	-- Set USER_OUT to 1 to read from USER_IN.
+	USER_IN          : in   std_logic_vector(5 downto 0);
+	USER_OUT         : out   std_logic_vector(5 downto 0);
+
+	OSD_STATUS       : in    std_logic
 );
 end emu;
 
