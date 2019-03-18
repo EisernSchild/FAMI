@@ -51,8 +51,10 @@ port
 	i_btn_one_player : in std_logic;
 	i_btn_two_players: in std_logic;
 	
+	o_Clk_Video : out std_logic;
+	
 	o_RegData_cpu  : out std_logic_vector(111 downto 0);
-	o_Debug_cpu : out std_logic_vector(15 downto 0);
+	o_Debug_cpu    : out std_logic_vector(15 downto 0);
 	
 	o_VGA_R3 : out std_logic_vector(2 downto 0); -- Red Color 4Bits
 	o_VGA_G3 : out std_logic_vector(2 downto 0); -- Green Color 4Bits
@@ -138,6 +140,7 @@ architecture System of Framebuffer is
 	type PALETTE is array (15 downto 0) of std_logic_vector(7 downto 0);
 	signal video_palette : PALETTE := (X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00",X"00");
 	signal video_scroll		    : std_logic_vector( 7 downto 0);
+	signal video_clock          : std_logic;
 	
 	-- PROM buses
 	type   prom_buses_array is array (0 to 27) of std_logic_vector(7 downto 0);
@@ -433,28 +436,32 @@ end generate;
 	----------------------------------------------------------------------------------------------------------
 	
 	-- set video palette ($8000-$800f)
-	video_palette(0) <= cpu_do when cpu_addr = X"8000" and cpu_we = '1' and cpu_clock_e = '0';
-	video_palette(1) <= cpu_do when cpu_addr = X"8001" and cpu_we = '1' and cpu_clock_e = '0';
-	video_palette(2) <= cpu_do when cpu_addr = X"8002" and cpu_we = '1' and cpu_clock_e = '0';
-	video_palette(3) <= cpu_do when cpu_addr = X"8003" and cpu_we = '1' and cpu_clock_e = '0';
-	video_palette(4) <= cpu_do when cpu_addr = X"8004" and cpu_we = '1' and cpu_clock_e = '0';
-	video_palette(5) <= cpu_do when cpu_addr = X"8005" and cpu_we = '1' and cpu_clock_e = '0';
-	video_palette(6) <= cpu_do when cpu_addr = X"8006" and cpu_we = '1' and cpu_clock_e = '0';
-	video_palette(7) <= cpu_do when cpu_addr = X"8007" and cpu_we = '1' and cpu_clock_e = '0';
-	video_palette(8) <= cpu_do when cpu_addr = X"8008" and cpu_we = '1' and cpu_clock_e = '0';
-	video_palette(9) <= cpu_do when cpu_addr = X"8009" and cpu_we = '1' and cpu_clock_e = '0';
-	video_palette(10) <= cpu_do when cpu_addr = X"800a" and cpu_we = '1' and cpu_clock_e = '0';
-	video_palette(11) <= cpu_do when cpu_addr = X"800b" and cpu_we = '1' and cpu_clock_e = '0';
-	video_palette(12) <= cpu_do when cpu_addr = X"800c" and cpu_we = '1' and cpu_clock_e = '0';
-	video_palette(13) <= cpu_do when cpu_addr = X"800d" and cpu_we = '1' and cpu_clock_e = '0';
-	video_palette(14) <= cpu_do when cpu_addr = X"800e" and cpu_we = '1' and cpu_clock_e = '0';
-	video_palette(15) <= cpu_do when cpu_addr = X"800f" and cpu_we = '1' and cpu_clock_e = '0';
+	video_palette(0) <= cpu_do when cpu_addr = X"8000" and cpu_we = '1';
+	video_palette(1) <= cpu_do when cpu_addr = X"8001" and cpu_we = '1';
+	video_palette(2) <= cpu_do when cpu_addr = X"8002" and cpu_we = '1';
+	video_palette(3) <= cpu_do when cpu_addr = X"8003" and cpu_we = '1';
+	video_palette(4) <= cpu_do when cpu_addr = X"8004" and cpu_we = '1';
+	video_palette(5) <= cpu_do when cpu_addr = X"8005" and cpu_we = '1';
+	video_palette(6) <= cpu_do when cpu_addr = X"8006" and cpu_we = '1';
+	video_palette(7) <= cpu_do when cpu_addr = X"8007" and cpu_we = '1';
+	video_palette(8) <= cpu_do when cpu_addr = X"8008" and cpu_we = '1';
+	video_palette(9) <= cpu_do when cpu_addr = X"8009" and cpu_we = '1';
+	video_palette(10) <= cpu_do when cpu_addr = X"800a" and cpu_we = '1';
+	video_palette(11) <= cpu_do when cpu_addr = X"800b" and cpu_we = '1';
+	video_palette(12) <= cpu_do when cpu_addr = X"800c" and cpu_we = '1';
+	video_palette(13) <= cpu_do when cpu_addr = X"800d" and cpu_we = '1';
+	video_palette(14) <= cpu_do when cpu_addr = X"800e" and cpu_we = '1';
+	video_palette(15) <= cpu_do when cpu_addr = X"800f" and cpu_we = '1';
 	
 	-- scrolling
 	video_scroll <= cpu_do when cpu_addr = X"8100" and cpu_we = '1';
 	
+	-- output video clock
+	video_clock <= cpu_clock_e;
+	o_Clk_Video <= video_clock;
+	
 	-- video ram scan
-	process(i_Clk_6144K)
+	process(video_clock)
 		variable video_h_counter : std_logic_vector(7 downto 0) := X"FF";
 		variable video_v_counter : std_logic_vector(7 downto 0) := X"FF";
 		variable video_h_scroll  : std_logic_vector(7 downto 0) := X"00";
@@ -463,7 +470,7 @@ end generate;
 		variable lock_cpu : std_logic := '0';
 		variable frame_skip : std_logic := '0';
 	begin
-		if rising_edge(i_Clk_6144K) then
+		if rising_edge(video_clock) then
 			-- cpu bus ?
 			if (cpu_bs = '1') and (cpu_ba = '0') then lock_cpu := '1'; cpu_irq <= '1'; else lock_cpu:='0'; end if;
 			

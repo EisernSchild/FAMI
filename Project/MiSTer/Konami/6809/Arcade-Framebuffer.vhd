@@ -295,6 +295,7 @@ architecture basic of emu is
 	signal clock_locked : std_logic;
 	signal Clk_18432K : std_logic;
 	signal Clk_6144K : std_logic;
+	signal Clk_Vid	: std_logic;
 	
 	-- video
 	signal VGA_R3, VGA_G3 : std_logic_vector(2 downto 0);
@@ -324,7 +325,7 @@ begin
 -- assigning video streching, pixel enabled and clock
 	VIDEO_ARX <= x"10";-- when (status(8) = '1') else x"04";
 	VIDEO_ARY <= x"09";-- when (status(8) = '1') else x"03";
-	CLK_VIDEO <= Clk_6144K;
+	CLK_VIDEO <= Clk_Vid; -- Clk_6144K;
 	VGA_HS <= HS;
 	VGA_VS <= VS;
 	VGA_DE <= DE;
@@ -402,7 +403,7 @@ begin
 	video1 : video
 	port map
 	(                                    
-		clk => Clk_6144K,                
+		clk => Clk_Vid, -- Clk_6144K,                
 		reset_n => '1',--(not reset),
 
 		VGA_R4 => VGA_R3 & VGA_R3(2),
@@ -447,6 +448,8 @@ begin
 		i_btn_left_coin   => joyAB(7) or joyAB(8),
 		i_btn_one_player  => joyAB(7),
 		i_btn_two_players => joyAB(8),
+		
+		o_Clk_Video => Clk_Vid,
 		
 		o_RegData_cpu => RegData_cpu,
 		o_Debug_cpu => Debug_cpu,
