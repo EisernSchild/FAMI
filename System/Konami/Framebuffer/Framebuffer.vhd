@@ -35,8 +35,7 @@ generic
 );
 port
 (
-	i_Clk_18432K : in std_logic; -- input clock 18.43 Mhz
-	i_Clk_6144K  : in std_logic; -- input clock  6.14 Mhz
+	i_Clk_9216K : in std_logic; -- input clock 18.432 Mhz / 2
 	i_Reset      : in std_logic; -- reset when 1
 	
 	i_btn_flash_bomb : in std_logic;
@@ -50,8 +49,6 @@ port
 	i_btn_left_coin  : in std_logic;
 	i_btn_one_player : in std_logic;
 	i_btn_two_players: in std_logic;
-	
-	o_Clk_Video : out std_logic;
 	
 	o_RegData_cpu  : out std_logic_vector(111 downto 0);
 	o_Debug_cpu    : out std_logic_vector(15 downto 0);
@@ -182,7 +179,7 @@ lite_label1 : if LITE_BUILD generate
 		nIRQ     => cpu_irq,     -- interrupt request
 		nFIRQ    => '1',         -- fast interrupt request
 		nNMI     => '1',         -- non-maskable interrupt
-		EXTAL    => i_Clk_18432K, -- input oscillator
+		EXTAL    => not i_Clk_9216K, -- input oscillator
 		XTAL     => '0',         -- input oscillator
 		nHALT    => '1',         -- not halt - causes the MPU to stop running
 		nRESET   => not i_Reset, -- not reset
@@ -293,7 +290,7 @@ end generate;
 		data_a    => cpu_do,
 		q_a       => video_wram_do,
 
-		clock_b   => i_Clk_6144K,
+		clock_b   => video_clock,
 		address_b => video_addr_output,
 		q_b       => video_pixel
 	);
@@ -352,10 +349,10 @@ end generate;
 	--          We have to mask it off otherwise the "Juno First" logo on the title screen is wrong
 
 lite_label2 : if JUNO_FIRST generate	
-	process(i_Clk_18432K)
+	process(i_Clk_9216K)
 		-- variable x : std_logic_vector(7 downto 0) := X"00";
 	begin
-		if rising_edge(i_Clk_18432K) then
+		if rising_edge(i_Clk_9216K) then
 			
 			
 		end if;
@@ -457,8 +454,7 @@ end generate;
 	video_scroll <= cpu_do when cpu_addr = X"8100" and cpu_we = '1';
 	
 	-- output video clock
-	video_clock <= cpu_clock_e;
-	o_Clk_Video <= video_clock;
+	video_clock <= i_Clk_9216K;
 	
 	-- video ram scan
 	process(video_clock)
@@ -478,7 +474,7 @@ end generate;
 			if (h_porch = X"00") and (v_porch = X"00") and (video_v_counter = X"FF") and (video_h_counter = X"FF") then
 					
 					-- cpu irq by vertical sync ?
-					if (lock_cpu = '0') and (frame_skip = '0') then -- and (int_control = '1') then
+					if (lock_cpu = '0') and (frame_skip = '0') then
 						cpu_irq <= '0';
 						frame_skip := '1';
 					else

@@ -293,9 +293,9 @@ architecture basic of emu is
 
 	-- clocks  
 	signal clock_locked : std_logic;
-	signal Clk_18432K : std_logic;
-	signal Clk_6144K : std_logic;
-	signal Clk_Vid	: std_logic;
+	signal Clk_9216K : std_logic;
+	signal Clk_4936K : std_logic;
+	-- signal Clk_Vid	: std_logic;
 	
 	-- video
 	signal VGA_R3, VGA_G3 : std_logic_vector(2 downto 0);
@@ -323,9 +323,9 @@ begin
 	LED_POWER <= "00";
 	
 -- assigning video streching, pixel enabled and clock
-	VIDEO_ARX <= x"10";-- when (status(8) = '1') else x"04";
+	VIDEO_ARX <= x"0B";-- when (status(8) = '1') else x"04";
 	VIDEO_ARY <= x"09";-- when (status(8) = '1') else x"03";
-	CLK_VIDEO <= Clk_Vid; -- Clk_6144K;
+	CLK_VIDEO <= Clk_9216K;
 	VGA_HS <= HS;
 	VGA_VS <= VS;
 	VGA_DE <= DE;
@@ -351,7 +351,7 @@ begin
 	hps : hps_io
 	generic map (STRLEN => (CONF_STR'length) + (CONF_STR2'length) + (CONF_STR3'length) + (CONF_STR4'length))
 	port map (
-		CLK_SYS => Clk_18432K,
+		CLK_SYS => Clk_9216K,
 		HPS_BUS => HPS_BUS,
 		conf_str => to_slv(CONF_STR & CONF_STR2 & CONF_STR3 & CONF_STR4),
 	
@@ -394,8 +394,8 @@ begin
 	port map(
 		refclk   => CLK_50M,
 		rst      => '0',
-		outclk_0 => Clk_18432K,
-		outclk_1 => Clk_6144K,
+		outclk_0 => Clk_9216K,
+		outclk_1 => Clk_4936K,
 		locked   => clock_locked
 	);
 	
@@ -403,7 +403,7 @@ begin
 	video1 : video
 	port map
 	(                                    
-		clk => Clk_Vid, -- Clk_6144K,                
+		clk => Clk_9216K,                
 		reset_n => '1',--(not reset),
 
 		VGA_R4 => VGA_R3 & VGA_R3(2),
@@ -433,8 +433,7 @@ begin
 	-- System Framebuffer
 	System_Framebuffer : entity work.Framebuffer
 	port map(	
-		i_Clk_18432K => Clk_18432K,    -- clock 18.432 Mhz
-		i_Clk_6144K => Clk_6144K,    -- clock 6.144 Mhz
+		i_Clk_9216K => Clk_9216K,    -- clock 18.432 Mhz / 2
 		i_Reset     =>	RESET,        -- reset when 1
 		
 		i_btn_flash_bomb => joyAB(5),
@@ -448,8 +447,6 @@ begin
 		i_btn_left_coin   => joyAB(7) or joyAB(8),
 		i_btn_one_player  => joyAB(7),
 		i_btn_two_players => joyAB(8),
-		
-		o_Clk_Video => Clk_Vid,
 		
 		o_RegData_cpu => RegData_cpu,
 		o_Debug_cpu => Debug_cpu,
