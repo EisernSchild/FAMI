@@ -53,6 +53,11 @@ port
 	o_RegData_cpu  : out std_logic_vector(111 downto 0);
 	o_Debug_cpu    : out std_logic_vector(15 downto 0);
 	
+	o_HBlank  : out std_logic;
+	o_VBlank  : out std_logic;
+	o_HSync   : out std_logic;
+	o_VSync   : out std_logic;
+	
 	o_VGA_R3 : out std_logic_vector(2 downto 0); -- Red Color 4Bits
 	o_VGA_G3 : out std_logic_vector(2 downto 0); -- Green Color 4Bits
 	o_VGA_B2 : out std_logic_vector(1 downto 0)  -- Blue Color 4Bits
@@ -471,7 +476,7 @@ end generate;
 			if (cpu_bs = '1') and (cpu_ba = '0') then lock_cpu := '1'; cpu_irq <= '1'; else lock_cpu:='0'; end if;
 			
 			-- irq ?
-			if (h_porch = X"00") and (v_porch = X"00") and (video_v_counter = X"FF") and (video_h_counter = X"FF") then
+			if (h_porch = X"3F") and (v_porch = X"1F") and (video_v_counter = X"FF") and (video_h_counter = X"FF") then
 					
 					-- cpu irq by vertical sync ?
 					if (lock_cpu = '0') and (frame_skip = '0') then
@@ -489,6 +494,16 @@ end generate;
 				-- set horizontal porch
 				h_porch := h_porch + X"01";
 				
+				-- set hblank
+				o_HBlank <= '1';
+				o_HSync <= '0';
+			
+			else
+			
+				-- set hblank
+				o_HBlank <= '0';
+				o_HSync <= '1';
+				
 			end if;
 			
 			-- horizontal porch
@@ -503,6 +518,16 @@ end generate;
 					
 					-- set horizontal porch
 					v_porch := v_porch + X"01";
+					
+					-- set vblank
+					o_VBlank <= '1';
+					o_VSync <= '0';
+				
+				else
+				
+					-- set vblank
+					o_VBlank <= '0';
+					o_VSync <= '1';
 					
 				end if;
 				

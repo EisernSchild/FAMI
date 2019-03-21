@@ -242,6 +242,11 @@ architecture basic of emu is
 		DEBUG_OUT6 : in std_logic_vector(63 downto 0);
 		DEBUG_OUT7 : in std_logic_vector(63 downto 0);
 		
+		HBlank : in std_logic;
+		VBlank : in std_logic;
+		HSync : in std_logic;
+		VSync : in std_logic;
+		
 		CE_PIXEL : out std_logic;
 		VGA_HS : out std_logic;
 		VGA_VS : out std_logic;
@@ -302,6 +307,7 @@ architecture basic of emu is
 	signal VGA_B2 : std_logic_vector(1 downto 0);
 	signal HS_CORE, VS_CORE, Cs_CORE : std_logic;
 	signal HS, VS, DE : std_logic;
+	signal HBlank, VBlank, HSync, VSync : std_logic;
 	
 	-- Audio
 	signal AUDIO_L8, AUDIO_R8 : std_logic_vector(7 downto 0);
@@ -419,6 +425,11 @@ begin
 		DEBUG_OUT6 => X"0000000000000000",
 		DEBUG_OUT7 => X"0000000000000000",
 		
+		HBlank => HBlank,
+		VBlank => VBlank,
+		HSync => HSync,
+		VSync => VSync,
+		
 		CE_PIXEL => CE_PIXEL,
 		VGA_HS => HS,
 		VGA_VS => VS,
@@ -450,6 +461,11 @@ begin
 		
 		o_RegData_cpu => RegData_cpu,
 		o_Debug_cpu => Debug_cpu,
+		
+		o_HBlank => HBlank,
+		o_VBlank => VBlank,
+		o_HSync => HSync,
+		o_VSync => VSync,		
 		
 		o_VGA_R3 => VGA_R3, -- Red Color 3Bits
 		o_VGA_G3 => VGA_G3, -- Green Color 3Bits
