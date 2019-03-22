@@ -129,8 +129,8 @@ architecture System of Framebuffer is
 	signal blit_ackn : std_logic;
 	
 	-- dip switches + input
-	signal dip_1   : std_logic_vector(7 downto 0) := X"00";
-	signal dip_2   : std_logic_vector(7 downto 0) := X"00";
+	signal dip_1   : std_logic_vector(7 downto 0) := X"FF";
+	signal dip_2   : std_logic_vector(7 downto 0) := X"FF";
 	signal input_1 : std_logic_vector(7 downto 0) := X"FF";
 	signal input_2 : std_logic_vector(7 downto 0) := X"FF";
 	
@@ -393,9 +393,11 @@ lite_label3 : if JUNO_FIRST generate
 	blit_trigger <= '0' when blit_ackn = '1' else '1' when cpu_addr = X"8073" and cpu_we = '1' else '0';
 end generate;
 
--- lite_label4 : if TUTANKHAM generate
+lite_label4 : if TUTANKHAM generate
 	-- mux cpu in data between roms/io/wram
-	cpu_di <=
+	cpu_di <=	
+		dip_1 when cpu_addr = X"81E0" else
+		dip_2 when cpu_addr = X"8160" else
 		input_1 when cpu_addr = X"81A0" else
 		input_2 when cpu_addr = X"8180" else
 		prom_buses(14) when cpu_addr(15 downto 12) = X"9" and mem_bank_select(3 downto 0) = X"8" else
@@ -424,7 +426,7 @@ end generate;
 	-- input
 	input_1 <= '1' & not i_btn_flash_bomb & not i_btn_fire_right & not i_btn_fire_left & not i_btn_down & not i_btn_up & not i_btn_right & not i_btn_left;
 	input_2 <= '1' & '1' & '1' & i_btn_two_players & i_btn_one_player & '1' & i_btn_left_coin & '1';
--- end generate;
+end generate;
 		
 	-- assign cpu in/out data addresses	
 	cpu_rom_addr  <= cpu_addr(11 downto 0) when cpu_addr(15 downto 12) >= X"9" else X"000";

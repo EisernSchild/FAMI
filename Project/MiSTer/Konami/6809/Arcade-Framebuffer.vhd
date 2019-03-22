@@ -120,27 +120,35 @@ entity emu is port
 end emu;
 
 architecture basic of emu is
--- menu constant strings
-	constant CONF_STR : string :=
-		"ROM;;" &
-		"-;" &
-		"FS,ROM;" &
-		"-;" &
-		"J,Fire 1,Fire 2,Fire 3,Start 1P,Start 2P;" &
-		"-;";
---	"O1,Aspect Ratio,Original,Wide;",
---	"O2,Orientation,Vert,Horz;",
---	"O34,Scanlines(vert),No,25%,50%,75%;",
+	-- menu constant strings
+
+	-- "111111xx" Lives Active High
+	-- "11111x11" Cabinet
+	-- "1111x111" Bonus Life
+	-- "11xx1111" Difficulty
+	-- "1x111111" 1 per Life/1 per Game ??
+	-- "x1111111" Demo Sounds
 	
+	constant CONF_STR1 : string :=
+		"A.TUTANKHM;;" &
+		"-;" &
+		"J,Fire Left,Fire Right,Flash Bomb,Start 1P,Start 2P,Coin;" &
+		"-;" &
+		"O1,Pause,OFF,ON;" &
+		"O23,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;" &
+		"O45,Aspect X,100%,75%,62%,56%;";
+
 	constant CONF_STR2 : string :=
-		"AB,Save Slot,1,2,3,4;";
-
-	constant CONF_STR3 : string :=
-		"6,Load state;";
-
-	constant CONF_STR4 : string :=
-		"7,Save state;" &
-		"V,v0.01.";
+		"O67,Lives,3,4,5,Cheat;" &
+		"O8,Cabinet,Upright,Cocktail;" &
+		"O9,Bonus Life,30000,40000;" &
+		"OAB,Difficulty,Easy,Normal,Hard,Hardest;" &
+		"OC,Coin??,1 per Life, 1 per Game;" &
+		"OD,Demo Sounds,OFF,ON;" &	
+		"-;" &
+		"R0,Reset;" &
+		"-;" &
+		"V,v1.00.00;";
 		
 -- "sys/pll.v" module definition in VHDL
 	component pll is
@@ -355,11 +363,11 @@ begin
 	
 -- sys/hps_io implementation (User io)
 	hps : hps_io
-	generic map (STRLEN => (CONF_STR'length) + (CONF_STR2'length) + (CONF_STR3'length) + (CONF_STR4'length))
+	generic map (STRLEN => (CONF_STR1'length) + (CONF_STR2'length))
 	port map (
 		CLK_SYS => Clk_9216K,
 		HPS_BUS => HPS_BUS,
-		conf_str => to_slv(CONF_STR & CONF_STR2 & CONF_STR3 & CONF_STR4),
+		conf_str => to_slv(CONF_STR1 & CONF_STR2),
 	
 		buttons => buttons,
 		forced_scandoubler => forced_scandoubler,
