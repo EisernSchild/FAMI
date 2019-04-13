@@ -93,6 +93,7 @@ architecture System of Framebuffer is
 	end component mc6809;
 	
 	-- Main CPU
+	signal cpu_extal      : std_logic := '0';
 	signal cpu_clock_e    : std_logic;
 	signal cpu_clock_q    : std_logic;
 	signal cpu_addr       : std_logic_vector(15 downto 0);
@@ -159,6 +160,13 @@ begin
 	-- Clocks
 	----------------------------------------------------------------------------------------------------------
 	
+	process(i_Clk_9216K)
+	begin
+		if rising_edge(i_Clk_9216K) then
+			cpu_extal <= not cpu_extal;			
+		end if;
+	end process;
+	
 lite_label : if LITE_BUILD generate
 
 end generate;
@@ -173,24 +181,24 @@ lite_label1 : if LITE_BUILD generate
 	Data_Processor : mc6809
 	port map
 	(
-		D        => cpu_di,      -- cpu data input 8 bit
-		DOut     => cpu_do,      -- cpu data output 8 bit
-		ADDR     => cpu_addr,    -- cpu address 16 bit
-		RnW      => cpu_oe,      -- write enabled
-		E        => cpu_clock_e, -- output clock E
-		Q        => cpu_clock_q, -- output clock Q
-		BS       => cpu_bs,      -- bus status
-		BA       => cpu_ba,      -- bus available
-		nIRQ     => cpu_irq,     -- interrupt request
-		nFIRQ    => '1',         -- fast interrupt request
-		nNMI     => '1',         -- non-maskable interrupt
-		EXTAL    => not i_Clk_9216K, -- input oscillator
-		XTAL     => '0',         -- input oscillator
-		nHALT    => '1',         -- not halt - causes the MPU to stop running
-		nRESET   => not i_Reset, -- not reset
-		MRDY     => '1',         -- strech E and Q
-		nDMABREQ => '1',         -- suspend execution
-		RegData  => RegData_cpu  -- register data (debug)
+		D        => cpu_di,          -- cpu data input 8 bit
+		DOut     => cpu_do,          -- cpu data output 8 bit
+		ADDR     => cpu_addr,        -- cpu address 16 bit
+		RnW      => cpu_oe,          -- write enabled
+		E        => cpu_clock_e,     -- output clock E
+		Q        => cpu_clock_q,     -- output clock Q
+		BS       => cpu_bs,          -- bus status
+		BA       => cpu_ba,          -- bus available
+		nIRQ     => cpu_irq,         -- interrupt request
+		nFIRQ    => '1',             -- fast interrupt request
+		nNMI     => '1',             -- non-maskable interrupt
+		EXTAL    => not cpu_extal,   -- input oscillator
+		XTAL     => '0',             -- input oscillator
+		nHALT    => '1',             -- not halt - causes the MPU to stop running
+		nRESET   => not i_Reset,     -- not reset
+		MRDY     => '1',             -- strech E and Q
+		nDMABREQ => '1',             -- suspend execution
+		RegData  => RegData_cpu      -- register data (debug)
 	);
 end generate;
 	
@@ -478,7 +486,7 @@ end generate;
 			if (cpu_bs = '1') and (cpu_ba = '0') then lock_cpu := '1'; cpu_irq <= '1'; else lock_cpu:='0'; end if;
 			
 			-- irq ?
-			if (h_porch = X"3F") and (v_porch = X"1F") and (video_v_counter = X"FF") and (video_h_counter = X"FF") then
+			if (h_porch = X"00") and (v_porch = X"00") and (video_v_counter = X"00") and (video_h_counter = X"00") then
 					
 					-- cpu irq by vertical sync ?
 					if (lock_cpu = '0') and (frame_skip = '0') then
