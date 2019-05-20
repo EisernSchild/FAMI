@@ -307,7 +307,8 @@ architecture basic of emu is
 	-- clocks  
 	signal clock_locked : std_logic;
 	signal Clk_9216K : std_logic;
-	signal Clk_4936K : std_logic;
+	signal Clk_7151K : std_logic;
+	-- signal Clk_4936K : std_logic;
 	-- signal Clk_Vid	: std_logic;
 	
 	-- video
@@ -328,7 +329,7 @@ begin
 -- assigning audio
 	AUDIO_S   <= '0';
 	AUDIO_L   <= (AUDIO_L8 & AUDIO_L8);
-	AUDIO_R   <= (AUDIO_R8 & AUDIO_R8);
+	AUDIO_R   <= (AUDIO_L8 & AUDIO_L8); -- mono 8 bit here
 	AUDIO_MIX <= "00";
 	
 -- assigning LEDs
@@ -409,7 +410,7 @@ begin
 		refclk   => CLK_50M,
 		rst      => '0',
 		outclk_0 => Clk_9216K,
-		outclk_1 => Clk_4936K,
+		outclk_1 => Clk_7151K,
 		locked   => clock_locked
 	);
 	
@@ -453,6 +454,7 @@ begin
 	System_Framebuffer : entity work.Framebuffer
 	port map(	
 		i_Clk_9216K => Clk_9216K,    -- clock 18.432 Mhz / 2
+		i_Clk_7159K => Clk_7151K,    -- input clock 14.318 Mhz / 2
 		i_Reset     =>	RESET,        -- reset when 1
 		
 		i_btn_flash_bomb => joyAB(5),
@@ -477,7 +479,9 @@ begin
 		
 		o_VGA_R3 => VGA_R3, -- Red Color 3Bits
 		o_VGA_G3 => VGA_G3, -- Green Color 3Bits
-		o_VGA_B2 => VGA_B2  -- Blue Color 2Bits
+		o_VGA_B2 => VGA_B2, -- Blue Color 2Bits
+		
+		o_AUDIO_8 => AUDIO_L8
 	);
 
 end basic;

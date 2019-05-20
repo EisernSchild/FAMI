@@ -36,6 +36,7 @@ generic
 port
 (
 	i_Clk_9216K : in std_logic; -- input clock 18.432 Mhz / 2
+	i_Clk_7159K : in std_logic; -- input clock 14.318 Mhz / 2
 	i_Reset      : in std_logic; -- reset when 1
 	
 	i_btn_flash_bomb : in std_logic;
@@ -60,7 +61,9 @@ port
 	
 	o_VGA_R3 : out std_logic_vector(2 downto 0); -- Red Color 4Bits
 	o_VGA_G3 : out std_logic_vector(2 downto 0); -- Green Color 4Bits
-	o_VGA_B2 : out std_logic_vector(1 downto 0)  -- Blue Color 4Bits
+	o_VGA_B2 : out std_logic_vector(1 downto 0); -- Blue Color 4Bits
+	
+	o_AUDIO_8 : out std_logic_vector(7 downto 0) -- Audio 8 bit mono
       
 );
 end Framebuffer;
@@ -92,6 +95,32 @@ architecture System of Framebuffer is
 	);
 	end component mc6809;
 	
+	-- Yamaha YM2149 / General Instrument AY-3-8910 Sound Chip 
+	component ym2149 is port
+	(
+		CLK             : in std_logic;
+		CE              : in std_logic;
+		RESET           : in std_logic;
+		BDIR            : in std_logic;
+		BC              : in std_logic;
+		DI              : in std_logic_vector(7 downto 0);
+		DO              : out std_logic_vector(7 downto 0);
+		CHANNEL_A       : out std_logic_vector(7 downto 0);
+		CHANNEL_B       : out std_logic_vector(7 downto 0);
+		CHANNEL_C       : out std_logic_vector(7 downto 0);
+
+		SEL             : in std_logic;
+		MODE            : in std_logic;
+		ACTIVE_CHANNELS : out std_logic_vector(5 downto 0);
+		
+		IOA_in          : in std_logic_vector(7 downto 0);
+		IOA_out         : out std_logic_vector(7 downto 0);
+
+		IOB_in          : in std_logic_vector(7 downto 0);
+		IOB_out         : out std_logic_vector(7 downto 0)
+	);
+	end component;
+	
 	-- Main CPU
 	signal cpu_extal      : std_logic := '0';
 	signal cpu_clock_e    : std_logic;
@@ -111,6 +140,22 @@ architecture System of Framebuffer is
 	signal cpu_wram_we    : std_logic;
 	signal cpu_wram_do    : std_logic_vector( 7 downto 0);
 	signal cpu_rom_addr   : std_logic_vector(11 downto 0);
+	
+	-- Sound CPU Memory Signals
+	signal spu_m1           : std_logic;
+	signal spu_mreq         : std_logic;
+	signal spu_iorq         : std_logic;
+	signal spu_rd           : std_logic;
+	signal spu_wr           : std_logic;
+	signal spu_rfsh         : std_logic;
+	signal spu_addr         : std_logic_vector(15 downto 0);
+	signal spu_do           : std_logic_vector(7 downto 0);
+	signal spu_di           : std_logic_vector(7 downto 0);
+	signal spu_rom_addr     : std_logic_vector(11 downto 0);
+	
+	-- Sound Chip Memory Signals
+	signal sn_we          : std_logic;
+	signal wav1,wav2,wav3 : std_logic_vector(7 downto 0);
 	
 	-- Video RAM Memory Signals
 	signal video_wram_addr        : std_logic_vector(14 downto 0);
@@ -201,6 +246,57 @@ lite_label1 : if LITE_BUILD generate
 		RegData  => RegData_cpu      -- register data (debug)
 	);
 end generate;
+
+-- Sound CPU : Z80
+	Sound_Processor : entity work.T80s
+	port map
+	(
+		RESET_n => not i_Reset, -- not reset
+		CLK     => i_Clk_7159K, -- clock
+		CEN     => '1',         -- clock enabled
+		WAIT_n  => '1',         -- WAIT (input, active Low)
+		INT_n   => '1',         -- Interrupt Request (input, active Low)
+		NMI_n   => '1',         -- Nonmaskable Interrupt (input, negative edge-triggered)
+		BUSRQ_n => '1',         -- Bus Request (input, active Low)
+		M1_n    => spu_m1,      -- Machine Cycle One (output, active Low)
+		MREQ_n  => spu_mreq,    -- Memory Request (output, active Low, tristate)
+		IORQ_n  => spu_iorq,    -- Input/Output Request (output, active Low, tristate)
+		RD_n    => spu_rd,      -- Read (output, active Low, tristate)
+		WR_n    => spu_wr,      -- Write (output, active Low, tristate)
+		RFSH_n  => spu_rfsh,    -- Refresh (output, active Low)
+		HALT_n  => open,        -- HALT State (output, active Low)
+		BUSAK_n => open,        -- Bus Acknowledge (output, active Low)
+		OUT0    => '0',         -- 0 => OUT(C),0, 1 => OUT(C),255
+		A       => spu_addr,    -- Address Bus (output, active High, tristate)
+		DI      => spu_di,      -- Data Bus (input, active High, tristate).
+		DO      => spu_do       -- Data Bus (output, active High, tristate).
+	);
+
+-- Sound Chip : AY8910	
+	Sound_Chip : ym2149
+	port map
+	(
+		CLK 		=> not i_Clk_7159K,
+		CE 		=> '1',
+		RESET 	=> i_Reset,
+		BDIR 		=> sn_we,
+		BC 		=> spu_wr,
+		DI 		=> spu_do,
+		DO 		=> open,
+		CHANNEL_A=> wav1,
+		CHANNEL_B=> wav2,
+		CHANNEL_C=> wav3,
+
+		SEL 		=> '0',
+		MODE 		=> '0',
+		ACTIVE_CHANNELS => open,
+		IOA_in 	=> (others => '0'),
+		IOA_out	=> open,
+
+		IOB_in 	=> (others => '0'),
+		IOB_out	=> open
+	);
+
 	
 	----------------------------------------------------------------------------------------------------------
 	-- Memory Mapping
@@ -292,6 +388,10 @@ end generate;
 	--	0x9000-0x9FFF	4096	ROM Bank	bank1
 	--	0xA000-0xFFFF	24576	ROM
 	
+	-- ROMS located on the KT-5112-2B board (z80 + ym2149 sound)
+	-- 0x0000, 0x1000, "s1.7a"
+	-- 0x1000, 0x1000, "s2.8a"
+	
 	
 	-- $0000 - $7FFF : direct video RAM access 
 	Video_RAM : work.dpram generic map (nGenRamADDrWidthVideo, nGenRamDataWidth)
@@ -343,9 +443,9 @@ end generate;
 	PROM_8I : entity work.PROM_J8 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(13));  -- $17000
 	PROM_9I : entity work.PROM_J9 port map (CLK => cpu_clock_e, ADDR => cpu_rom_addr, DATA => prom_buses(14));  -- $18000
 	
-	--	
-	-- PROM_7a : entity work.PROM_11_7A port map (CLK => spu_clock, ADDR => spu_rom_addr, DATA => prom_buses(27));
-	-- PROM_8a : entity work.PROM_10_8A port map (CLK => spu_clock, ADDR => spu_rom_addr, DATA => prom_buses(27));
+	--	sound cpu roms
+	PROM_7a : entity work.PROM_11_7A port map (CLK => i_Clk_7159K, ADDR => spu_rom_addr, DATA => prom_buses(15));
+	PROM_8a : entity work.PROM_10_8A port map (CLK => i_Clk_7159K, ADDR => spu_rom_addr, DATA => prom_buses(16));
 	
 	----------------------------------------------------------------------------------------------------------
 	-- Juno First Blitter Hardware
@@ -442,6 +542,23 @@ end generate;
 	cpu_wram_we   <= cpu_we when (cpu_addr(15 downto 12) = X"8") else '0';
 	video_wram_addr <= cpu_addr(14 downto 0) when (cpu_addr(15 downto 12) < X"8") else "000" & X"000";
 	video_wram_we <= cpu_we when (cpu_addr(15 downto 12) < X"8") else '0';
+	
+	----------------------------------------------------------------------------------------------------------
+	-- Sound Processor i/o control
+	----------------------------------------------------------------------------------------------------------
+	
+lite_label5 : if TUTANKHAM generate
+	-- mux sound cpu in data between roms
+	spu_di <=	
+		prom_buses(16) when cpu_addr(15 downto 12) = X"1" else
+		prom_buses(15);
+	
+	sn_we <= '1' when spu_wr = '0' and spu_iorq = '0' else '0';	
+	o_AUDIO_8 <= wav1 + wav2 + wav3;
+end generate;
+
+	-- assign sound cpu in/out data addresses
+	spu_rom_addr  <= spu_addr(11 downto 0) when spu_addr(15 downto 13) = "000" else X"000";
 	
 	----------------------------------------------------------------------------------------------------------
 	-- Video update

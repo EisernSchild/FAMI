@@ -360,6 +360,8 @@ set_global_assignment -name VERILOG_FILE ../../../../Shared/SysText.v
 set_global_assignment -name VERILOG_FILE ../../../../Shared/SysTextFont.v
 set_global_assignment -name VHDL_FILE ../../../../Shared/dpram.vhd
 set_global_assignment -name QIP_FILE M6809.qip
+set_global_assignment -name QIP_FILE ../../../../t80/rtl/vhdl/T80.qip
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../../YM2149/ym2149.sv
 set_global_assignment -name QIP_FILE sys.qip
 set_global_assignment -name QSYS_FILE ../../../../sys/vip.qsys
 set_global_assignment -name CDF_FILE jtag.cdf

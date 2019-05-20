@@ -13,3 +13,6 @@
 [submodule "M6821"]
 	path = M6821
 	url = https://github.com/EisernSchild/MC6821
+[submodule "YM2149"]
+	path = YM2149
+	url = https://github.com/EisernSchild/YM2149

@@ -356,6 +356,7 @@ set_location_assignment PIN_W20 -to SW[3]
 set_global_assignment -name PRE_FLOW_SCRIPT_FILE "quartus_sh:../../../../sys/build_id.tcl"
 
 
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
 set_global_assignment -name VHDL_FILE ../../../../System/Konami/Framebuffer/Framebuffer.vhd
 set_global_assignment -name VHDL_FILE "../../../../System/Konami/Framebuffer/tutankhm-lite.vhd"
 set_global_assignment -name VHDL_FILE "Arcade-Framebuffer.vhd"
@@ -364,6 +365,8 @@ set_global_assignment -name VERILOG_FILE ../../../../Shared/SysText.v
 set_global_assignment -name VERILOG_FILE ../../../../Shared/SysTextFont.v
 set_global_assignment -name VHDL_FILE ../../../../Shared/dpram.vhd
 set_global_assignment -name QIP_FILE M6809.qip
+set_global_assignment -name QIP_FILE ../../../../t80/rtl/vhdl/T80.qip
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../../YM2149/ym2149.sv
 set_global_assignment -name QIP_FILE sys_q13.qip
 set_global_assignment -name QSYS_FILE ../../../../sys/vip.qsys
 set_global_assignment -name CDF_FILE jtag.cdf
@@ -385,4 +388,3 @@ set_global_assignment -name VHDL_FILE ../../../../roms/Tutankham/H5.vhd
 set_global_assignment -name VHDL_FILE ../../../../roms/Tutankham/H6.vhd
 set_global_assignment -name VHDL_FILE ../../../../roms/Tutankham/10_8A.vhd
 set_global_assignment -name VHDL_FILE ../../../../roms/Tutankham/11_7A.vhd
-set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
